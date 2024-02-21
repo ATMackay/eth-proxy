@@ -1,0 +1,5 @@
+
+port: 0
+loglevel: "info"
+logformat: "plain"
+urls: "https://goerli.infura.io/v3/8d4c7364bece4f759c7db5a24cda9921,https://goerli.infura.io/v3/8d4c7364bece4f759c7db5a24cda9921" # MUST CHANGE
