@@ -9,14 +9,14 @@ Start service
 ~/go/src/github.com/ATMackay/eth-proxy$ make run
 ```
 
-Use a new terminal to interact with the application. Use the Status check to probe for liveness 
+Use a new terminal to interact with the application. Use the `/status` endpoint to probe for liveness 
 
 ```
 ~$ curl localhost:8080/status
 {"version":"v0.1.0-17379d11","service":"eth-proxy","failures":[]}
 ```
 
-Use the Healthcheck probe to check for readiness (an empty failures list indicates that the service is healthy and ready to take requests).
+Use the `/health` endpoint to probe for readiness (an empty failures list indicates that the service is healthy and ready to take requests).
 ```
 ~$ curl localhost:8080/health
 {"version":"v0.1.0-17379d11","service":"eth-proxy","failures":[]}
