@@ -151,6 +151,16 @@ type responseRecorder struct {
 	response   []byte
 }
 
+func (w *responseRecorder) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (w *responseRecorder) Write(b []byte) (int, error) {
+	w.response = b
+	return w.ResponseWriter.Write(b)
+}
+
 func readBody(r *http.Request) (map[string]interface{}, error) {
 	body := make(map[string]interface{})
 	b, err := io.ReadAll(r.Body)
