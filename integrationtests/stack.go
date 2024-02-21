@@ -70,8 +70,7 @@ func newEthBackend(t *testing.T, accounts ...common.Address) *blockchainBackend 
 
 	t.Helper()
 
-	// create new chain with a pre-filled genesis account
-
+	// create new chain & backend with a pre-filled genesis account
 	bankAccount := createEOA(t)
 
 	log.SetDefault(log.NewLogger(log.DiscardHandler()))
