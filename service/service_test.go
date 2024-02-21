@@ -215,7 +215,7 @@ func Test_MultiNodeClient(t *testing.T) {
 			"many",
 			func() string {
 				var urls string
-				for i := range 100 {
+				for i := 0; i < 100; i++ {
 					urls += fmt.Sprintf("url%d,", i)
 				}
 				return strings.TrimRight(urls, ",")
