@@ -35,7 +35,7 @@ func (s *Service) Status() httprouter.Handle {
 
 }
 
-// HealthResponse contains status response fields.
+// HealthResponse contains health probe response fields.
 type HealthResponse struct {
 	Version  string   `json:"version,omitempty"`
 	Service  string   `json:"service,omitempty"`
@@ -68,7 +68,7 @@ func (s *Service) Health() httprouter.Handle {
 	})
 }
 
-// BalanceResp contains.
+// BalanceResp contains balance value formatted as a string.
 type BalanceResp struct {
 	Balance string `json:"balance"`
 }

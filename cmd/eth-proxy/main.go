@@ -77,7 +77,7 @@ func main() {
 		panic(err)
 	}
 
-	srv := service.New(8080, l, multiClient)
+	srv := service.New(cfg.Port, l, multiClient)
 	if err != nil {
 		panic(fmt.Sprintf("error building service: %v", err))
 	}
