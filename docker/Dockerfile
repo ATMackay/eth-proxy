@@ -1,5 +1,5 @@
 # Use a  golang alpine as the base image
-FROM public.ecr.aws/docker/library/golang:1.21.0-alpine3.17 as go_builder
+FROM public.ecr.aws/docker/library/golang:1.22.0-alpine3.19 as go_builder
 RUN apk update
 RUN apk add make cmake git alpine-sdk
 

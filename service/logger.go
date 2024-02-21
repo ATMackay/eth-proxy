@@ -36,7 +36,7 @@ func NewLogger(logLevel, logFormat string) (*logrus.Entry, error) {
 	logger.Level = l.Level
 	logger = logger.WithFields(logrus.Fields{
 		"serviceName": ServiceName,
-		"version":     fmt.Sprintf("%s-%v", Version, gitCommitHash[0:8]),
+		"version":     FullVersion,
 	})
 	return logger, nil
 }
