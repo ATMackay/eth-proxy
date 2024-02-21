@@ -12,12 +12,10 @@ import (
 )
 
 const (
-	StatusEndPnt = "/status" // status endpoint for LIVENESS PROBING
-	HeathEndPnt  = "/health" // health endpoint for READINESS probing
-
-	EthBalanceEndPnt = "/eth/balance/:address" // getBalance proxy endpoint (syntax compatible with httprouter)
-
-	metricsEndPnt = "/metrics" // Prometheus metrics endpoint
+	StatusEndPnt     = "/status"               // status endpoint for LIVENESS probing
+	HeathEndPnt      = "/health"               // health endpoint for READINESS probing
+	EthBalanceEndPnt = "/eth/balance/:address" // getBalance proxy endpoint (syntax compatible with httprouter Go web framework)
+	metricsEndPnt    = "/metrics"              // Prometheus metrics endpoint
 )
 
 // StatusResponse contains status response fields.
@@ -44,9 +42,8 @@ type HealthResponse struct {
 	Failures []string `json:"failures"`
 }
 
-// Health pings the layer one clients.
-//
-// TODO
+// Health pings the layer one clients. It ensures that the connected geth
+// execution clients are ready to accept incoming proxied requests.
 func (s *Service) Health() httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		health := &HealthResponse{

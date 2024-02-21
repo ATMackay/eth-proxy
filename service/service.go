@@ -6,6 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Service is the main application struct containing a SimpleEthClient
+// the http server and logger. It can be called to start and stop.
 type Service struct {
 	ethClient SimpleEthClient
 	server    *hTTPService
@@ -23,6 +25,7 @@ func New(port int, l *logrus.Entry, client SimpleEthClient) *Service {
 	return srv
 }
 
+// Start creates the HTTP server.
 func (s *Service) Start() {
 	s.logger.WithFields(logrus.Fields{
 		"compilationDate": date,
@@ -31,6 +34,7 @@ func (s *Service) Start() {
 	s.server.Start()
 }
 
+// Start gracefully shutts down the HTTP server.
 func (s *Service) Stop(sig os.Signal) {
 	s.logger.WithFields(logrus.Fields{"signal": sig}).Infof("stopping %v service", ServiceName)
 
@@ -39,6 +43,7 @@ func (s *Service) Stop(sig os.Signal) {
 	}
 }
 
+// Server exposes the http server externally.
 func (s *Service) Server() *hTTPService {
 	return s.server
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/ATMackay/eth-proxy/service"
 )
 
-// Test entire stack
+// Test E2E flows against an in-memory Ethereum server.
 func Test_E2EStack(t *testing.T) {
 
 	stack := makeEthProxyService(t)

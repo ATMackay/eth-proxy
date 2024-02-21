@@ -15,32 +15,32 @@ import (
 
 // SimpleEthClient exposes the eth_getBalance wrapper from the go-ethereum library
 type SimpleEthClient interface {
-	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) // queries eth balance at the specified block. If nil blockNumber is supplied the node will return the latest confirmed balance
+	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) // queries eth balance at the specified block. If nil blockNumber is supplied the node will return the latest confirmed balance.
 	ethereum.BlockNumberReader                                                                     // Used for healthcheck/readiness probe
 }
 
+// NewEthClient wraps the connector to the goven URL
 func NewEthClient(url string) (SimpleEthClient, error) {
 	return ethclient.Dial(url)
 }
 
-// Multi nodes
-
 var _ SimpleEthClient = (*multiNodeClient)(nil)
+
+// Multi nodes
 
 type multiNodeClient struct {
 	nodes []*item
 	mu    sync.RWMutex
 }
 
-// item has an idea so that when we update a node in the priority list, we sure that the priority list was not update before
+// item is used to track the ordering of multiple eth RPC clients.
 type item struct {
 	id     string // id is the position on the config url string
 	client SimpleEthClient
 }
 
-// NewMultiNodeClient connects to a comma-separated list of ethereum clients
-//
-// TODO - more full description
+// NewMultiNodeClient connects to a comma-separated list of ethereum clients and stores them in an ordered
+// list where they can be prioritized bad on the logic implemented in multiNodeCall.
 func NewMultiNodeClient(possibleUrls string, constructor func(url string) (SimpleEthClient, error)) (*multiNodeClient, error) {
 	urls := strings.Split(possibleUrls, ",")
 	var nodes []*item
@@ -71,6 +71,7 @@ func NewMultiNodeClient(possibleUrls string, constructor func(url string) (Simpl
 	}, nil
 }
 
+// increaseNodePriority bumps a client up one place in the slice.
 func (m *multiNodeClient) increaseNodePriority(position int, id string) {
 	if position == 0 {
 		return
@@ -123,8 +124,9 @@ func absDiff(a, b uint64) uint64 {
 	return b - a
 }
 
-// BlockNumber is used as part of the liveness probe for multiclients and will return
-// and error if any of the connected clients report to be syncing.
+// BlockNumber is used as part of the liveness probe for multiNodeClient and will return
+// and error if the connected Ethereum nodes report block heights with disparity grater
+// then the blockDiff limit.
 func (m *multiNodeClient) BlockNumber(ctx context.Context) (uint64, error) {
 	var blockheights []uint64
 	var errStr string
@@ -141,7 +143,7 @@ func (m *multiNodeClient) BlockNumber(ctx context.Context) (uint64, error) {
 		blockheights = append(blockheights, b)
 		if len(blockheights) > 1 {
 			if f, s := blockheights[len(blockheights)-1], blockheights[len(blockheights)-2]; absDiff(f, s) > blockDiff {
-				errStr += fmt.Sprintf("nodes %d (%d) and %d (%d) are reporting different chain tips|", index, index-1, f, s)
+				errStr += fmt.Sprintf("nodes %d (height=%d) and %d (height=%d) are reporting different chain tips|", index, f, index-1, s)
 			}
 		}
 		m.mu.RUnlock()
