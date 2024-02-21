@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -54,13 +55,7 @@ func Test_E2EStack(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	for _, tt := range apiTests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequestWithContext(context.Background(), tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), tt.endpoint()), nil)
-			if err != nil {
-				t.Fatalf("%v: %v", tt.name, err)
-			}
-			req.Header.Set("Content-Type", "application/json")
-
-			response, err := http.DefaultClient.Do(req)
+			response, err := executeRequest(tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), tt.endpoint()))
 			if err != nil {
 				t.Fatalf("%v: %v", tt.name, err)
 			}
@@ -84,4 +79,72 @@ func Test_E2EStack(t *testing.T) {
 
 	}
 
+}
+
+func Test_ConcurrentRequests(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		url        func() string
+		iterations int
+	}{
+		{
+			"mock-stack",
+			func() string {
+				stack := makeEthProxyService(t)
+				genesisAddr := stack.node.backend.bankAccount.From
+				endpnt := fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
+				time.Sleep(10 * time.Millisecond)
+				return fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), endpnt)
+			},
+			100,
+		},
+		//{
+		//	"real-stack", // execute 'make run' in a separate terminal and then this test to see how well the service handles concurrent requests
+		//	func() string {
+		//		return "http://localhost:8080/eth/balance/0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
+		//	},
+		//	25,
+		//},
+	}
+
+	for _, tt := range tests {
+		N := tt.iterations
+		t.Run(tt.name, func(t *testing.T) {
+			start := time.Now()
+			wg := sync.WaitGroup{}
+			for i := 0; i < N; i++ {
+				index := i
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					response, err := executeRequest(http.MethodGet, tt.url())
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					if response.StatusCode != http.StatusOK {
+						t.Errorf("%d: unexpected error code: %v", index, response.StatusCode)
+					}
+				}()
+			}
+			wg.Wait()
+			elapsed := time.Since(start)
+			t.Logf("%v: completed %d requests in %v seconds (%v req/s)\n", tt.name, N, elapsed, float64(N*1000)/float64(elapsed.Milliseconds()))
+		})
+	}
+}
+
+func executeRequest(methodType, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
 }
