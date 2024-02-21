@@ -59,7 +59,7 @@ func (s *Service) Health() httprouter.Handle {
 		// check clients
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
-		if _, err := s.ethClient.SyncProgress(ctx); err != nil {
+		if _, err := s.ethClient.BlockNumber(ctx); err != nil {
 			failures = append(failures, strings.Split(err.Error(), "|")...)
 		}
 

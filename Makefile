@@ -12,7 +12,7 @@ test:
 	go test -v -cover ./service
 
 test-stack:
-	go test -v ./integrationtests
+	go test -v -cover ./integrationtests
 
 docker:
 	cd docker && ./build.sh

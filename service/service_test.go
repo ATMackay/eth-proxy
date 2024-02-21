@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -41,8 +40,8 @@ func (f *fakeEthClient) BalanceAt(ctx context.Context, account common.Address, b
 	return big.NewInt(0), nil
 }
 
-func (f *fakeEthClient) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
-	return nil, nil
+func (f *fakeEthClient) BlockNumber(context.Context) (uint64, error) {
+	return 0, nil
 }
 
 func makeTestService(t *testing.T) *Service {

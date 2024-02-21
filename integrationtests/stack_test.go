@@ -20,31 +20,31 @@ func Test_E2EStack(t *testing.T) {
 
 	apiTests := []struct {
 		name             string
-		endpoint         string
+		endpoint         func() string
 		methodType       string
 		expectedResponse any
 		expectedCode     int
 	}{
-		//
-		// READ REQUESTS
-		//
 		{
 			"status",
-			service.StatusEndPnt,
+			func() string { return service.StatusEndPnt },
 			http.MethodGet,
 			&service.StatusResponse{Message: "OK", Version: service.FullVersion, Service: service.ServiceName},
 			http.StatusOK,
 		},
 		{
 			"health",
-			service.HeathEndPnt,
+			func() string { return service.HeathEndPnt },
 			http.MethodGet,
 			&service.HealthResponse{Version: service.FullVersion, Service: "eth-proxy", Failures: []string{}},
 			http.StatusOK,
 		},
 		{
 			"eth-balance",
-			fmt.Sprintf("/eth/balance/%v", dummyAddr),
+			func() string {
+				genesisAddr := stack.node.backend.bankAccount.From
+				return fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
+			},
 			http.MethodGet,
 			&service.BalanceResp{Balance: oneEther.String()},
 			http.StatusOK,
@@ -54,7 +54,7 @@ func Test_E2EStack(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	for _, tt := range apiTests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequestWithContext(context.Background(), tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), tt.endpoint), nil)
+			req, err := http.NewRequestWithContext(context.Background(), tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), tt.endpoint()), nil)
 			if err != nil {
 				t.Fatalf("%v: %v", tt.name, err)
 			}

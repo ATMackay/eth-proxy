@@ -16,7 +16,7 @@ import (
 // SimpleEthClient exposes the eth_getBalance wrapper from the go-ethereum library
 type SimpleEthClient interface {
 	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) // queries eth balance at the specified block. If nil blockNumber is supplied the node will return the latest confirmed balance
-	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)                              // Used for healthcheck/readiness probe
+	ethereum.BlockNumberReader                                                                     // Used for healthcheck/readiness probe
 }
 
 func NewEthClient(url string) (SimpleEthClient, error) {
@@ -114,26 +114,40 @@ func (m *multiNodeClient) BalanceAt(ctx context.Context, account common.Address,
 	return multiNodeCall(m, requests)
 }
 
-// SyncProgress is used as part of the liveness probe for multiclients and will return
+const blockDiff = 3 // criteria for reporting failure based on two connected clients reporting different block numbers
+
+func absDiff(a, b uint64) uint64 {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
+
+// BlockNumber is used as part of the liveness probe for multiclients and will return
 // and error if any of the connected clients report to be syncing.
-func (m *multiNodeClient) SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error) {
+func (m *multiNodeClient) BlockNumber(ctx context.Context) (uint64, error) {
+	var blockheights []uint64
 	var errStr string
 	for i := 0; i < len(m.nodes); i++ {
 		index := i
 		m.mu.RLock()
 		node := m.nodes[index]
-		s, err := node.client.SyncProgress(ctx)
+		b, err := node.client.BlockNumber(ctx)
 		if err != nil {
 			errStr += fmt.Sprintf("node %d err: %s|", index, err.Error())
+			m.mu.RUnlock()
+			continue
 		}
-		if s != nil {
-			errStr += fmt.Sprintf("node %d still syncing (current block: %d, highest block %v)|", index, s.CurrentBlock, s.HighestBlock)
+		blockheights = append(blockheights, b)
+		if len(blockheights) > 1 {
+			if f, s := blockheights[len(blockheights)-1], blockheights[len(blockheights)-2]; absDiff(f, s) > blockDiff {
+				errStr += fmt.Sprintf("nodes %d (%d) and %d (%d) are reporting different chain tips|", index, index-1, f, s)
+			}
 		}
 		m.mu.RUnlock()
-
 	}
 	if errStr != "" {
-		return nil, errors.New(errStr)
+		return 0, errors.New(errStr)
 	}
-	return nil, nil
+	return blockheights[0], nil
 }

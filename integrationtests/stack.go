@@ -1,11 +1,8 @@
 package integrationtests
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"math/big"
-	"net/http/httptest"
-	"net/rpc"
 	"os"
 	"testing"
 
@@ -13,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
 	"github.com/ethereum/go-ethereum/log"
@@ -36,12 +32,13 @@ func makeEthProxyService(t *testing.T) *svcStack {
 
 	bk := newEthBackend(t, common.HexToAddress(dummyAddr))
 
+	t.Cleanup(func() { bk.Close() })
+
 	// create proxy service
 	cfg := &service.Config{
 		Port:      8080,
-		LogLevel:  "info",
+		LogLevel:  "error", // change to 'info' or 'debug' to see the proxy service logs
 		LogFormat: "plain",
-		URLs:      bk.Server.URL,
 	}
 
 	l, err := service.NewLogger(cfg.LogLevel, cfg.LogFormat)
@@ -49,12 +46,9 @@ func makeEthProxyService(t *testing.T) *svcStack {
 		t.Fatal(err)
 	}
 
-	multiClient, err := service.NewMultiNodeClient(cfg.URLs, service.NewEthClient)
-	if err != nil {
-		panic(err)
-	}
+	ethClient := bk.Client()
 
-	svc := service.New(cfg.Port, l, multiClient)
+	svc := service.New(cfg.Port, l, ethClient)
 
 	svc.Start()
 
@@ -69,47 +63,42 @@ func makeEthProxyService(t *testing.T) *svcStack {
 
 type blockchainBackend struct {
 	*simulated.Backend
-	BankAccount *EOA
-	ChainID     int
-	Server      *httptest.Server
+	bankAccount *eoa
 }
 
 func newEthBackend(t *testing.T, accounts ...common.Address) *blockchainBackend {
 
 	t.Helper()
 
-	// create new chain with pre-filled genesis accounts
-	genesis := make(map[common.Address]core.GenesisAccount)
-	for _, account := range accounts {
-		genesis[account] = core.GenesisAccount{Balance: oneEther}
-	}
+	// create new chain with a pre-filled genesis account
+
 	bankAccount := createEOA(t)
-	genesis[bankAccount.From] = core.GenesisAccount{Balance: oneEther}
 
 	log.SetDefault(log.NewLogger(log.DiscardHandler()))
 
 	backend := &blockchainBackend{
-		Backend: simulated.NewBackend(genesis),
+		Backend: simTestBackend(bankAccount.From),
 	}
+	backend.bankAccount = bankAccount
 	t.Cleanup(func() { backend.Close() })
 
-	server := httptest.NewServer(newTestServer(backend))
-
-	t.Cleanup(func() { server.Close() })
-
-	return &blockchainBackend{
-		BankAccount: bankAccount,
-		ChainID:     simulatedChainID,
-		Server:      server,
-	}
+	return backend
 }
 
-type EOA struct {
+func simTestBackend(testAddr common.Address) *simulated.Backend {
+	return simulated.NewBackend(
+		core.GenesisAlloc{
+			testAddr: {Balance: oneEther},
+		},
+	)
+}
+
+type eoa struct {
 	*bind.TransactOpts
 	PrivateKey *ecdsa.PrivateKey
 }
 
-func createEOA(t *testing.T) *EOA {
+func createEOA(t *testing.T) *eoa {
 	t.Helper()
 	priv, err := crypto.GenerateKey()
 	if err != nil {
@@ -119,22 +108,10 @@ func createEOA(t *testing.T) *EOA {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &EOA{
+	return &eoa{
 		PrivateKey:   priv,
 		TransactOpts: opts,
 	}
-}
-
-func newTestServer(backend *blockchainBackend) *rpc.Server {
-	server := rpc.NewServer()
-	if err := server.RegisterName("eth", &backendAPI{backend}); err != nil {
-		panic(err)
-	}
-	return server
-}
-
-type backendAPI struct {
-	b *blockchainBackend
 }
 
 type ethereumStack struct {
@@ -146,54 +123,35 @@ type svcStack struct {
 	service *service.Service
 }
 
-func (b *blockchainBackend) fund(t *testing.T, to common.Address, amount *big.Int) string {
-
-	t.Helper()
-
-	signedTx := b.makeTx(t, b.BankAccount, &to, amount, nil)
-	if err := b.Client().SendTransaction(context.Background(), signedTx); err != nil {
-		t.Fatal(err)
-	}
-	b.Commit()
-	return signedTx.Hash().Hex()
-}
-
-func (b *blockchainBackend) makeTx(t *testing.T, sender *EOA, to *common.Address, value *big.Int, data []byte) *types.Transaction {
-
-	t.Helper()
-
-	signedTx, err := types.SignTx(b.makeUnsignedTx(t, sender.From, to, value, data), types.LatestSignerForChainID(big.NewInt(int64(b.ChainID))), sender.PrivateKey)
-	if err != nil {
-		t.Errorf("could not sign tx: %v", err)
-	}
-	return signedTx
-}
-
-func (b *blockchainBackend) makeUnsignedTx(t *testing.T, from common.Address, to *common.Address, value *big.Int, data []byte) *types.Transaction {
-	t.Helper()
-
-	nonce, err := b.Client().PendingNonceAt(context.Background(), from)
-	if err != nil {
-		t.Fatal(err)
-	}
-	gasTip, err := b.Client().SuggestGasTipCap(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	gasPrice, err := b.Client().SuggestGasPrice(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	gasPrice = new(big.Int).Add(gasPrice, big.NewInt(1))
-
-	return types.NewTx(&types.DynamicFeeTx{
-		Nonce:     nonce,
-		GasFeeCap: new(big.Int).Add(gasPrice, gasTip),
-		GasTipCap: gasTip,
-		Gas:       100000,
-		To:        to,
-		Value:     value,
-		Data:      data,
-	})
-}
+// TODO - create more scenarios in the stack to test
+//
+//func (b *blockchainBackend) newTx() (*types.Transaction, error) {
+//
+//	client := b.Client()
+//	key := b.bankAccount.PrivateKey
+//
+//	// create a signed transaction to send
+//	head, err := client.HeaderByNumber(context.Background(), nil) // Should be child's, good enough
+//	if err != nil {
+//		return nil, err
+//	}
+//	gasPrice := new(big.Int).Add(head.BaseFee, big.NewInt(params.GWei))
+//	addr := crypto.PubkeyToAddress(key.PublicKey)
+//	chainid, err := client.ChainID(context.Background())
+//	if err != nil {
+//		return nil, err
+//	}
+//	nonce, err := client.PendingNonceAt(context.Background(), addr)
+//	if err != nil {
+//		return nil, err
+//	}
+//	tx := types.NewTx(&types.DynamicFeeTx{
+//		ChainID:   chainid,
+//		Nonce:     nonce,
+//		GasTipCap: big.NewInt(params.GWei),
+//		GasFeeCap: gasPrice,
+//		Gas:       21000,
+//		To:        &addr,
+//	})
+//	return types.SignTx(tx, types.LatestSignerForChainID(chainid), key)
+//}
