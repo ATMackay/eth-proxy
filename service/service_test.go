@@ -273,14 +273,14 @@ func Test_API(t *testing.T) {
 			"status",
 			StatusEndPnt,
 			http.MethodGet,
-			&StatusResponse{Message: "OK", Version: Version, Service: ServiceName},
+			&StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName},
 			http.StatusOK,
 		},
 		{
 			"health",
 			HeathEndPnt,
 			http.MethodGet,
-			&HealthResponse{Version: Version, Service: ServiceName, Failures: []string{}},
+			&HealthResponse{Version: FullVersion, Service: ServiceName, Failures: []string{}},
 			http.StatusOK,
 		},
 		{

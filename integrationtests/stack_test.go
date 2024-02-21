@@ -32,14 +32,14 @@ func Test_E2EStack(t *testing.T) {
 			"status",
 			service.StatusEndPnt,
 			http.MethodGet,
-			&service.StatusResponse{Message: "OK", Version: service.Version, Service: service.ServiceName},
+			&service.StatusResponse{Message: "OK", Version: service.FullVersion, Service: service.ServiceName},
 			http.StatusOK,
 		},
 		{
 			"health",
 			service.HeathEndPnt,
 			http.MethodGet,
-			&service.HealthResponse{Version: "0.1.0", Service: "eth-proxy", Failures: []string{}},
+			&service.HealthResponse{Version: service.FullVersion, Service: "eth-proxy", Failures: []string{}},
 			http.StatusOK,
 		},
 		{

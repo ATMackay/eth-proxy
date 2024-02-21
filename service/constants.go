@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/hex"
+	"fmt"
 	"runtime/debug"
 	"time"
 )
@@ -12,6 +13,8 @@ const (
 )
 
 var (
+	FullVersion = fmt.Sprintf("%s-%v", Version, gitCommitHash[0:8]) // FullVersion prints semantic version followed by commit hash
+
 	gitCommit string // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/service.gitCommit=$commit_hash'"
 	buildDate string // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/service.buildDate=$build_date'"
 )
