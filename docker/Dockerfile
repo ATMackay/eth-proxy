@@ -26,7 +26,7 @@ RUN go mod download
 
 RUN GO111MODULES=on \
     go build \
-    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/service.buildDate=${build_date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
+    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/service.buildDate=${date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
     -o /out/eth-proxy ./cmd/eth-proxy/
 
 # Create linux svcuser

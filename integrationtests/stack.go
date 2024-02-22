@@ -17,7 +17,7 @@ import (
 )
 
 //
-// This package uses go-ethereum's simulated package to replicate the behavior of a geth execution client
+// go-ethereum's simulated package allows us to replicate the behavior of a user-configured geth execution client in memory
 // which in turn allows us to test the endpoints of our eth-proxy service end-to-end.
 //
 
