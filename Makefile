@@ -21,4 +21,4 @@ docker:
 	cd docker && ./build.sh
 	@echo  "To run the application execute 'docker run -p 8080:8080 -e ETH_PROXY_URLS=<your_ethereum_api> eth-proxy'"
 
-.PHONY: build run docker test test-stack test-benchmakrks
+.PHONY: build run docker test test-stack test-benchmarks

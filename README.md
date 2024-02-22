@@ -1,6 +1,6 @@
 # Go Ethereum Execution Client Proxy
 
-`eth-proxy` proxies Ethereum's JSON RPC queries (specifically `eth_getBalance`) exposing a RESTful API that can be easily executed by http clients. The application is built for scale and can handle hundreds of concurrent requests per second.
+`eth-proxy` proxies Ethereum's JSON RPC queries (specifically `eth_getBalance`) exposing a RESTful API that can be easily consumed by http clients. The server is built for scale and can handle hundreds of concurrent requests per second (using free rate-limited Ethereum API endpoints) with in-memory request/response benchmarks handling **O(1000)** req/s.
 
 ## Components
 
