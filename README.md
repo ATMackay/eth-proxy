@@ -27,7 +27,7 @@ Use the `/health` endpoint to probe for readiness (an empty failures list indica
 {"version":"v0.1.0-992d0028","service":"eth-proxy","failures":[]}
 ```
 
-Use the /eth/balance to query the ether balance of your choice.
+Use the /eth/balance to query the ether balance for an address of your choice. For example
 ```
 ~$ curl localhost:8080/eth/balance/0xfe3b557e8fb62b89f4916b721be55ceb828dbd73
 {"balance":"14058"}
@@ -61,7 +61,19 @@ Stack tests (mocking eth-proxy Ethereum nodes interactions)
 
 ## Docker
 
-Build Docker image
+To run with docker first build the `eth-proxy` Docker image
 ```
 ~/go/src/github.com/ATMackay/eth-proxy$ make docker
+```
+
+```
+~/go/src/github.com/ATMackay/eth-proxy$ docker images
+REPOSITORY                                                                      TAG                 IMAGE ID       CREATED          SIZE
+eth-proxy                                                                       f38d1fc             d50fcb2ad302   2 minutes ago   13.8MB
+eth-proxy                                                                       latest              d50fcb2ad302   2 minutes ago   13.8MB
+```
+
+Run a container
+```
+~$ docker run -p 8080:8080 -e ETH_PROXY_URLS=https://mainnet.infura.io/v3/4c664372f60943f690c615f182d50c63 eth-proxy
 ```
