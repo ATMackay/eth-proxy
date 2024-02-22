@@ -1,8 +1,10 @@
 package integrationtests
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"math/big"
+	"net/http"
 	"os"
 	"testing"
 
@@ -28,7 +30,21 @@ var (
 	dummyAddr = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
 )
 
-func makeEthProxyService(t *testing.T) *svcStack {
+func executeRequest(methodType, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func makeEthProxyService(t testing.TB) *svcStack {
 
 	bk := newEthBackend(t, common.HexToAddress(dummyAddr))
 
@@ -66,7 +82,7 @@ type blockchainBackend struct {
 	bankAccount *eoa
 }
 
-func newEthBackend(t *testing.T, accounts ...common.Address) *blockchainBackend {
+func newEthBackend(t testing.TB, accounts ...common.Address) *blockchainBackend {
 
 	t.Helper()
 
@@ -97,7 +113,7 @@ type eoa struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
-func createEOA(t *testing.T) *eoa {
+func createEOA(t testing.TB) *eoa {
 	t.Helper()
 	priv, err := crypto.GenerateKey()
 	if err != nil {
