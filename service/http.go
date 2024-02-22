@@ -1,11 +1,9 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -165,23 +163,6 @@ func (w *responseRecorder) WriteHeader(statusCode int) {
 func (w *responseRecorder) Write(b []byte) (int, error) {
 	w.response = b
 	return w.ResponseWriter.Write(b)
-}
-
-func readBody(r *http.Request) (map[string]interface{}, error) {
-	body := make(map[string]interface{})
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(b, &body); err != nil {
-		return nil, err
-	}
-	defer func() {
-		r.Body.Close()
-		r.Body = io.NopCloser(bytes.NewBuffer(b))
-		r.ContentLength = int64(bytes.NewBuffer(b).Len())
-	}()
-	return body, nil
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload any) error {
