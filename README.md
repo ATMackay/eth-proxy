@@ -1,9 +1,12 @@
 # Go Ethereum Execution Client Proxy
 
+`eth-proxy` proxies Ethereum's JSON RPC queries (specifically `eth_getBalance`) exposing a RESTful API that can be easily executed by http clients. The application is built for scale and can handle hundreds of concurrent requests per second.
+
 ## Components
 
-* Go HTTP microservice built with [httprouter](https://github.com/julienschmidt/httprouter) exposing a [Prometheus](https://prometheus.io/)  metrics server endpoint.
-* Lightweight Ethereum client interface using [go-ethereum](https://github.com/ethereum/go-ethereum/tree/master/ethclient)'s ethclient library.
+* Go HTTP microservice exposing a RESTful API built with [httprouter](https://github.com/julienschmidt/httprouter).
+* [Prometheus](https://prometheus.io/) metrics server endpoint.
+* Lightweight Ethereum JSON RPC client implementation using [go-ethereum](https://github.com/ethereum/go-ethereum/tree/master/ethclient)'s `ethclient` library.
 * Integration testing with go-ethereum's [simulation package](https://github.com/ethereum/go-ethereum/tree/master/ethclient/simulated).
 
 ## Getting started
