@@ -1,4 +1,4 @@
-port: 0
+port: 8080
 loglevel: "info"
 logformat: "plain"
 urls: "https://mainnet.infura.io/v3/4c664372f60943f690c615f182d50c63,https://mainnet.infura.io/v3/4c664372f60943f690c615f182d50c63" # Free Infura API keys (100k req/day limit)

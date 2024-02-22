@@ -41,7 +41,7 @@ func NewLogger(logLevel, logFormat string) (*logrus.Entry, error) {
 	return logger, nil
 }
 
-// return a formatted Logger object (log format is JSON by defulat)
+// newFormattedLogger returns a formatted Logger object (log format is JSON by default)
 func newFormattedLogger(logLevel logrus.Level, logFormat Format) *logrus.Logger {
 
 	l := logrus.New()

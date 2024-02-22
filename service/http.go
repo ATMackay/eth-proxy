@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// endPoint represents an api element.
 type endPoint struct {
 	path       string
 	handler    httprouter.Handle
@@ -58,6 +59,8 @@ func (a *api) addEndpoint(e endPoint) {
 	a.endpoints = append(a.endpoints, e)
 }
 
+// routes configures a new httprouter.Router, wrapping each handle (other than the metrics handle)
+// with a logger.
 func (a *api) routes(l *logrus.Entry) *httprouter.Router {
 
 	router := httprouter.New()
@@ -77,6 +80,8 @@ type hTTPService struct {
 	logger *logrus.Entry
 }
 
+// NewHTTPService returns a HTTP server with httprouter Router
+// handling requests.
 func NewHTTPService(port int, api *api, l *logrus.Entry) *hTTPService {
 
 	handler := api.routes(l)
@@ -95,6 +100,8 @@ func (h *hTTPService) Addr() string {
 	return h.server.Addr
 }
 
+// Start spawns the server which will listen on the TCP address srv.Addr
+// for incoming requests.
 func (h *hTTPService) Start() {
 	go func() {
 		if err := h.server.ListenAndServe(); err != nil {
@@ -144,6 +151,8 @@ func logHTTPRequest(entry *logrus.Entry, h httprouter.Handle) httprouter.Handle 
 	})
 }
 
+// responseRecorder is a wrapper for http.ResponseWriter used
+// byt logging middleware.
 type responseRecorder struct {
 	http.ResponseWriter
 

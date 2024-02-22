@@ -32,6 +32,8 @@ func (s *Service) Start() {
 		"gitCommit":       gitCommitHash,
 	}).Infof("starting %v service", ServiceName)
 	s.server.Start()
+
+	s.logger.Infof("listening on port %v", s.server.Addr())
 }
 
 // Start gracefully shutts down the HTTP server.

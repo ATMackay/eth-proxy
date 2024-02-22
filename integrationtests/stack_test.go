@@ -99,13 +99,25 @@ func Test_ConcurrentRequests(t *testing.T) {
 			},
 			100,
 		},
-		//{
-		//	"real-stack", // execute 'make run' in a separate terminal and then this test to see how well the service handles concurrent requests
-		//	func() string {
-		//		return "http://localhost:8080/eth/balance/0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
-		//	},
-		//	25,
-		//},
+		/*
+			{
+				// Uncomment and execute 'make run' in a separate terminal and then this test to see how well the service handles concurrent requests
+			    //
+				// Example output
+				//
+				//  ~/go/src/github.com/ATMackay/eth-proxy/integrationtests$ go test -v -run Test_ConcurrentRequests
+				//  === RUN   Test_ConcurrentRequests
+				//  === RUN   Test_ConcurrentRequests/real-stack
+				//  stack_test.go:133: real-stack: completed 200 requests in 919.66899ms seconds (217.6278563656148 req/s)
+				//
+				//
+				"real-stack",
+				func() string {
+					return "http://localhost:8080/eth/balance/0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
+				},
+				200,
+			},
+		*/
 	}
 
 	for _, tt := range tests {
@@ -120,7 +132,7 @@ func Test_ConcurrentRequests(t *testing.T) {
 					defer wg.Done()
 					response, err := executeRequest(http.MethodGet, tt.url())
 					if err != nil {
-						t.Error(err)
+						t.Errorf("%d: %v", index, err)
 						return
 					}
 					if response.StatusCode != http.StatusOK {
