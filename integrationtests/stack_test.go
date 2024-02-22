@@ -2,7 +2,6 @@ package integrationtests
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -145,18 +144,4 @@ func Test_ConcurrentRequests(t *testing.T) {
 			t.Logf("%v: completed %d requests in %v seconds (%v req/s)\n", tt.name, N, elapsed, float64(N*1000)/float64(elapsed.Milliseconds()))
 		})
 	}
-}
-
-func executeRequest(methodType, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
 }

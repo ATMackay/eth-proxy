@@ -62,6 +62,25 @@ Stack tests (mocking eth-proxy Ethereum nodes interactions)
 ~/go/src/github.com/ATMackay/eth-proxy$ make test-stack
 ```
 
+Benchmark testing
+```
+~/go/src/github.com/ATMackay/eth-proxy$ make test-benchmarks 
+go test -benchmem -bench BenchmarkConcurrentRequests ./integrationtests
+goos: linux
+goarch: amd64
+pkg: github.com/ATMackay/eth-proxy/integrationtests
+cpu: 13th Gen Intel(R) Core(TM) i9-13900H
+BenchmarkConcurrentRequests-20              1291           2905325 ns/op          336093 B/op       3076 allocs/op
+--- BENCH: BenchmarkConcurrentRequests-20
+    benchmark_test.go:60: executed 10 requests in 1.428248ms - mean duration: 1.428248ms per 10 requests (7002.801120448179 req/s)
+    benchmark_test.go:60: executed 1000 requests in 272.780843ms - mean duration: 2.727808ms per 10 requests (3667.033370003667 req/s)
+    benchmark_test.go:60: executed 4390 requests in 669.206962ms - mean duration: 1.524389ms per 10 requests (6561.679790026246 req/s)
+    benchmark_test.go:60: executed 7860 requests in 729.890607ms - mean duration: 928.614µs per 10 requests (10775.862068965518 req/s)
+    benchmark_test.go:60: executed 12910 requests in 3.750390592s - mean duration: 2.905027ms per 10 requests (3442.340791738382 req/s)
+PASS
+ok      github.com/ATMackay/eth-proxy/integrationtests  6.589s
+```
+
 ## Docker
 
 To run with docker first build the `eth-proxy` Docker image
