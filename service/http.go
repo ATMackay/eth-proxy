@@ -124,29 +124,26 @@ func logHTTPRequest(entry *logrus.Entry, h httprouter.Handle) httprouter.Handle 
 		if entry == nil {
 			return
 		}
-		start := time.Now()
-		body, err := readBody(req)
-		if err != nil {
-			entry.WithError(err)
-		}
 		statusRecorder := &responseRecorder{ResponseWriter: w}
+
+		start := time.Now()
 		h(statusRecorder, req, p)
 		elapsed := time.Since(start)
+
 		httpCode := statusRecorder.statusCode
 		entry = entry.WithFields(logrus.Fields{
 			"http_method":          req.Method,
 			"http_code":            httpCode,
 			"elapsed_microseconds": elapsed.Microseconds(),
+			"url":                  req.URL.Path,
+			"response":             string(statusRecorder.response),
 		})
-		// only log full request/reposne data if running in debug mode
-		if entry.Logger.Level >= logrus.DebugLevel {
-			entry = entry.WithField("body", body)
-			entry = entry.WithField("response", string(statusRecorder.response))
-		}
+		// only log full request/response data if running in debug mode or if
+		// the server returned an error response code.
 		if httpCode > 399 {
-			entry.Warn(req.URL.Path)
+			entry.Warn("httpErr")
 		} else {
-			entry.Print(req.URL.Path)
+			entry.Debug("servedHttpRequest")
 		}
 	})
 }
