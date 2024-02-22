@@ -78,9 +78,6 @@ func main() {
 	}
 
 	srv := service.New(cfg.Port, l, multiClient)
-	if err != nil {
-		panic(fmt.Sprintf("error building service: %v", err))
-	}
 
 	srv.Start()
 	sigChan := make(chan os.Signal, 1)
