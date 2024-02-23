@@ -119,14 +119,15 @@ func (h *hTTPService) Stop() error {
 // logHTTPRequest provides logging middleware. It surfaces low level request/response data from the http server.
 func logHTTPRequest(entry *logrus.Entry, h httprouter.Handle) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		if entry == nil {
-			return
-		}
+
 		statusRecorder := &responseRecorder{ResponseWriter: w}
 
 		start := time.Now()
 		h(statusRecorder, req, p)
 		elapsed := time.Since(start)
+		if entry == nil {
+			return
+		}
 
 		httpCode := statusRecorder.statusCode
 		entry = entry.WithFields(logrus.Fields{
