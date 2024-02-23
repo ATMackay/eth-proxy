@@ -28,7 +28,9 @@ type StatusResponse struct {
 // Status implements the status request endpoint. Always returns OK.
 func (s *Service) Status() httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName})
+		if err := respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName}); err != nil {
+			s.logger.Error(err)
+		}
 	})
 
 }
