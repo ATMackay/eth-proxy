@@ -24,7 +24,9 @@ var (
 
 // gitCommitHash returns a string builder that reads information embedded
 // in the running binary during the build process.
-var gitCommitHash = func() string {
+var gitCommitHash = func() string { return makeVCS() }()
+
+func makeVCS() string {
 	// Try embedded value
 	if len(gitCommit) > 7 {
 		mustDecodeHex(gitCommit[0:8]) // will panic if build has been generated with a malicious $commit_hash value
@@ -39,19 +41,21 @@ var gitCommitHash = func() string {
 		}
 	}
 	if commit == "" {
-		return "00000000" // default commit string
+		commit = "00000000" // default commit string
 	}
 	mustDecodeHex(commit)
 	return commit
-}()
+}
 
 // date returns a formatted time.Time to string generator
-var date = func() string {
+var date = func() string { return makeDate() }()
+
+func makeDate() string {
 	if buildDate != "" {
 		return buildDate
 	}
 	return time.Now().Format(time.RFC3339)
-}()
+}
 
 func mustDecodeHex(input string) {
 	_, err := hex.DecodeString(input)

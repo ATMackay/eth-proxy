@@ -28,9 +28,7 @@ type StatusResponse struct {
 // Status implements the status request endpoint. Always returns OK.
 func (s *Service) Status() httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		if err := respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName}); err != nil {
-			s.logger.Error(err)
-		}
+		respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName})
 	})
 
 }
@@ -57,10 +55,16 @@ func (s *Service) Health() httprouter.Handle {
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
 		if _, err := s.ethClient.BlockNumber(ctx); err != nil {
-			failures = append(failures, strings.Split(err.Error(), "|")...)
+			failureArray := strings.Split(err.Error(), "|")
+			trimmed := failureArray[0 : len(failureArray)-1]
+			failures = append(failures, trimmed...)
 		}
 
 		health.Failures = failures
+
+		if len(health.Failures) > 0 {
+			httpCode = http.StatusServiceUnavailable
+		}
 
 		if err := respondWithJSON(w, httpCode, health); err != nil {
 			s.logger.Error(err)
@@ -88,7 +92,7 @@ func (s *Service) Balance() httprouter.Handle {
 		defer cancelFunc()
 		b, err := s.ethClient.BalanceAt(ctx, common.HexToAddress(address), nil)
 		if err != nil {
-			respondWithError(w, http.StatusBadRequest, fmt.Errorf("eth client error: %v", err))
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
 			return
 		}
 
