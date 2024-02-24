@@ -18,6 +18,7 @@ import (
 type SimpleEthClient interface {
 	ethereum.BlockNumberReader
 	ethereum.TransactionReader
+	ethereum.TransactionSender
 	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) // queries eth balance at the specified block. If nil blockNumber is supplied the node will return the latest confirmed balance.
 }
 
@@ -169,6 +170,24 @@ func (m *multiNodeClient) TransactionReceipt(ctx context.Context, txHash common.
 		m.mu.RLock()
 		node := m.nodes[index]
 		receipt, err = node.client.TransactionReceipt(ctx, txHash)
+		m.mu.RUnlock()
+		if err == nil {
+			m.increaseNodePriority(i, node.id)
+			break
+		}
+	}
+	return
+}
+
+// SendTransaction method injects a signed transaction into the pending transaction pool for execution. If the transaction
+// was a contract creation, the TransactionReceipt method can be used to retrieve the
+// contract address after the transaction has been mined.
+func (m *multiNodeClient) SendTransaction(ctx context.Context, tx *types.Transaction) (err error) {
+	for i := 0; i < len(m.nodes); i++ {
+		index := i
+		m.mu.RLock()
+		node := m.nodes[index]
+		err = node.client.SendTransaction(ctx, tx)
 		m.mu.RUnlock()
 		if err == nil {
 			m.increaseNodePriority(i, node.id)

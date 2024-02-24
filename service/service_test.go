@@ -22,7 +22,7 @@ import (
 
 const (
 	dummyAddr = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
-	dummtTxid = "0x326c7dbb58eaf646af01f7b6f4fb1e0fb1afe1329ac670ce5945e8fd940ec4d7"
+	dummyTxid = "0x326c7dbb58eaf646af01f7b6f4fb1e0fb1afe1329ac670ce5945e8fd940ec4d7"
 )
 
 var (
@@ -59,6 +59,10 @@ func (f *fakeEthClient) TransactionReceipt(ctx context.Context, txHash common.Ha
 	return &types.Receipt{}, nil
 }
 
+func (f *fakeEthClient) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	return nil
+}
+
 type fakeEthClientWithErr struct {
 	err error
 }
@@ -87,27 +91,20 @@ func (f *fakeEthClientWithErr) TransactionReceipt(ctx context.Context, txHash co
 	return &types.Receipt{}, f.err
 }
 
+func (f *fakeEthClientWithErr) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	return f.err
+}
+
 type fakeEthClientWithBlock struct {
+	fakeEthClient
 }
 
 func newFakeEthClientWithBlock(_ string) (SimpleEthClient, error) {
 	return &fakeEthClientWithBlock{}, nil
 }
 
-func (f *fakeEthClientWithBlock) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	return big.NewInt(0), nil
-}
-
 func (f *fakeEthClientWithBlock) BlockNumber(context.Context) (uint64, error) {
 	return rand.Uint64(), nil
-}
-
-func (f *fakeEthClientWithBlock) TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error) {
-	return &types.Transaction{}, false, nil
-}
-
-func (f *fakeEthClientWithBlock) TransactionReceipt(ctx context.Context, txHash common.Hash) (tx *types.Receipt, err error) {
-	return &types.Receipt{}, nil
 }
 
 func makeTestService(t *testing.T, urls string, constructor func(url string) (SimpleEthClient, error)) *Service {
@@ -328,7 +325,7 @@ func Test_API(t *testing.T) {
 		name               string
 		urls               string
 		serviceConstructor func(urls string) *Service
-		endpoint           string
+		endpoint           func() string
 		methodType         string
 		expectedResponse   any
 		expectedCode       int
@@ -340,7 +337,7 @@ func Test_API(t *testing.T) {
 			"status",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			StatusEndPnt,
+			func() string { return StatusEndPnt },
 			http.MethodGet,
 			&StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName},
 			http.StatusOK,
@@ -349,7 +346,7 @@ func Test_API(t *testing.T) {
 			"health",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			HeathEndPnt,
+			func() string { return HeathEndPnt },
 			http.MethodGet,
 			&HealthResponse{Version: FullVersion, Service: ServiceName, Failures: []string{}},
 			http.StatusOK,
@@ -358,7 +355,7 @@ func Test_API(t *testing.T) {
 			"eth-balance",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			fmt.Sprintf("/eth/balance/%v", dummyAddr),
+			func() string { return fmt.Sprintf("/eth/balance/%v", dummyAddr) },
 			http.MethodGet,
 			&BalanceResp{Balance: "0"},
 			http.StatusOK,
@@ -367,18 +364,30 @@ func Test_API(t *testing.T) {
 			"eth-tx",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			fmt.Sprintf("/eth/tx/%v", dummtTxid),
+			func() string { return fmt.Sprintf("/eth/tx/hash/%v", dummyTxid) },
 			http.MethodGet,
-			&TxResponse{Tx: dummyTx, IsPending: false},
+			&TxResponse{Tx: dummyTx, Txid: dummyTxid, IsPending: false},
 			http.StatusOK,
 		},
 		{
 			"eth-tx-receipt",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			fmt.Sprintf("/eth/receipt/%v", dummtTxid),
+			func() string { return fmt.Sprintf("/eth/tx/receipt/%v", dummyTxid) },
 			http.MethodGet,
 			&types.Receipt{},
+			http.StatusOK,
+		},
+		{
+			"eth-tx-send",
+			"-",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
+			func() string {
+				b, _ := dummyTx.MarshalJSON()
+				return fmt.Sprintf("/eth/tx/new/0x%x", b)
+			},
+			http.MethodPut,
+			&TxResponse{Txid: dummyTx.Hash().Hex()},
 			http.StatusOK,
 		},
 		//
@@ -388,9 +397,20 @@ func Test_API(t *testing.T) {
 			"eth-balance-malformed",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			fmt.Sprintf("/eth/balance/%v", "0xnotanaddress"),
+			func() string { return fmt.Sprintf("/eth/balance/%v", "0xnotanaddress") },
 			http.MethodGet,
 			map[string]string{"error": "invalid address format"},
+			http.StatusBadRequest,
+		},
+		{
+			"eth-tx-send-malformed",
+			"-",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
+			func() string {
+				return "/eth/tx/new/0xnotATx"
+			},
+			http.MethodPut,
+			map[string]string{"error": "invalid tx data: invalid hex string"},
 			http.StatusBadRequest,
 		},
 		//
@@ -400,7 +420,7 @@ func Test_API(t *testing.T) {
 			"health-node-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			HeathEndPnt,
+			func() string { return HeathEndPnt },
 			http.MethodGet,
 			&HealthResponse{Version: FullVersion, Service: ServiceName, Failures: []string{"node 0 err: testErr"}},
 			http.StatusServiceUnavailable,
@@ -409,7 +429,7 @@ func Test_API(t *testing.T) {
 			"eth-balance-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			fmt.Sprintf("/eth/balance/%v", dummyAddr),
+			func() string { return fmt.Sprintf("/eth/balance/%v", dummyAddr) },
 			http.MethodGet,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
@@ -418,7 +438,7 @@ func Test_API(t *testing.T) {
 			"eth-tx-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			fmt.Sprintf("/eth/tx/%v", dummtTxid),
+			func() string { return fmt.Sprintf("/eth/tx/hash/%v", dummyTxid) },
 			http.MethodGet,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
@@ -427,8 +447,20 @@ func Test_API(t *testing.T) {
 			"eth-receipt-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			fmt.Sprintf("/eth/receipt/%v", dummtTxid),
+			func() string { return fmt.Sprintf("/eth/tx/receipt/%v", dummyTxid) },
 			http.MethodGet,
+			map[string]string{"error": "eth client error: testErr"},
+			http.StatusInternalServerError,
+		},
+		{
+			"eth-tx-send-err",
+			"testErr",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
+			func() string {
+				b, _ := dummyTx.MarshalJSON()
+				return fmt.Sprintf("/eth/tx/new/0x%x", b)
+			},
+			http.MethodPut,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
 		},
@@ -443,7 +475,7 @@ func Test_API(t *testing.T) {
 
 			time.Sleep(10 * time.Millisecond)
 
-			b, code, err := executeRequest(tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", s.Server().Addr(), tt.endpoint))
+			b, code, err := executeRequest(tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", s.Server().Addr(), tt.endpoint()))
 			if err != nil {
 				t.Fatalf("%v: %v", tt.name, err)
 			}

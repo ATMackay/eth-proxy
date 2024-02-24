@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/julienschmidt/httprouter"
 )
@@ -17,8 +18,9 @@ const (
 	HeathEndPnt  = "/health" // health endpoint for READINESS probing
 
 	EthBalanceEndPnt = "/eth/balance/:address" // eth_getBalance proxy endpoint
-	EthTx            = "/eth/tx/:id"           // eth_getTransaction proxy endpoint
-	EthTxReceipt     = "/eth/receipt/:id"      // eth_getTransactionReceipt proxy endpoint
+	EthTx            = "/eth/tx/hash/:id"      // eth_getTransaction proxy endpoint
+	EthTxReceipt     = "/eth/tx/receipt/:id"   // eth_getTransactionReceipt proxy endpoint
+	EthSendTx        = "/eth/tx/new/:data"     // eth_sendRawTransaction proxy endpoint
 
 	metricsEndPnt = "/metrics" // Prometheus metrics endpoint
 )
@@ -31,10 +33,10 @@ type StatusResponse struct {
 }
 
 // Status implements the status request endpoint. Always returns OK.
-func (s *Service) Status() httprouter.Handle {
+func Status() httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		if err := respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName}); err != nil {
-			s.logger.Error(err)
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 	})
 
@@ -49,7 +51,7 @@ type HealthResponse struct {
 
 // Health pings the layer one clients. It ensures that the connected geth
 // execution clients are ready to accept incoming proxied requests.
-func (s *Service) Health() httprouter.Handle {
+func Health(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		health := &HealthResponse{
 			Service: ServiceName,
@@ -61,7 +63,7 @@ func (s *Service) Health() httprouter.Handle {
 		// check clients
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
-		if _, err := s.ethClient.BlockNumber(ctx); err != nil {
+		if _, err := ethClient.BlockNumber(ctx); err != nil {
 			failureArray := strings.Split(err.Error(), "|")
 			trimmed := failureArray[0 : len(failureArray)-1]
 			failures = append(failures, trimmed...)
@@ -74,7 +76,7 @@ func (s *Service) Health() httprouter.Handle {
 		}
 
 		if err := respondWithJSON(w, httpCode, health); err != nil {
-			s.logger.Error(err)
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 	})
 }
@@ -85,7 +87,7 @@ type BalanceResp struct {
 }
 
 // Balance handles the getBalance proxy endpoint.
-func (s *Service) Balance() httprouter.Handle {
+func Balance(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 		address := p.ByName("address")
@@ -97,14 +99,14 @@ func (s *Service) Balance() httprouter.Handle {
 
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
-		b, err := s.ethClient.BalanceAt(ctx, common.HexToAddress(address), nil)
+		b, err := ethClient.BalanceAt(ctx, common.HexToAddress(address), nil)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
 			return
 		}
 
 		if err := respondWithJSON(w, http.StatusOK, &BalanceResp{Balance: b.String()}); err != nil {
-			s.logger.Error(err)
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 
 	})
@@ -113,12 +115,13 @@ func (s *Service) Balance() httprouter.Handle {
 
 // TxResponse contains ethereum transaction data and a pending flag.
 type TxResponse struct {
-	Tx        *types.Transaction `json:"tx"`
-	IsPending bool               `json:"is_pending"`
+	Tx        *types.Transaction `json:"tx,omitempty"`
+	Txid      string             `json:"txid,omitempty"`
+	IsPending bool               `json:"is_pending,omitempty"`
 }
 
-// Tx handles the eth_getTransaction proxy endpoint.
-func (s *Service) Tx() httprouter.Handle {
+// Tx returns a handler for the eth_getTransaction proxy endpoint.
+func Tx(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 		txid := p.ByName("id")
@@ -132,14 +135,14 @@ func (s *Service) Tx() httprouter.Handle {
 
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
-		tx, pending, err := s.ethClient.TransactionByHash(ctx, txHash)
+		tx, pending, err := ethClient.TransactionByHash(ctx, txHash)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
 			return
 		}
 
-		if err := respondWithJSON(w, http.StatusOK, &TxResponse{Tx: tx, IsPending: pending}); err != nil {
-			s.logger.Error(err)
+		if err := respondWithJSON(w, http.StatusOK, &TxResponse{Tx: tx, Txid: txHash.Hex(), IsPending: pending}); err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 
 	})
@@ -148,8 +151,8 @@ func (s *Service) Tx() httprouter.Handle {
 // TxResponse contains ethereum transaction data and a pending flag.
 type TxReceiptResponse *types.Receipt
 
-// Tx handles the eth_getTransaction proxy endpoint.
-func (s *Service) TxReceipt() httprouter.Handle {
+// TxReceipt returns a handler for the eth_getTransactionReceipt proxy endpoint.
+func TxReceipt(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 		txid := p.ByName("id")
@@ -163,7 +166,7 @@ func (s *Service) TxReceipt() httprouter.Handle {
 
 		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancelFunc()
-		tx, err := s.ethClient.TransactionReceipt(ctx, txHash)
+		tx, err := ethClient.TransactionReceipt(ctx, txHash)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
 			return
@@ -175,7 +178,41 @@ func (s *Service) TxReceipt() httprouter.Handle {
 		}
 
 		if err := respondWithJSON(w, http.StatusOK, &tx); err != nil {
-			s.logger.Error(err)
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
+		}
+
+	})
+}
+
+// SendTx returns a handler for the eth_sendRawTransaction proxy endpoint.
+func SendTx(ethClient SimpleEthClient) httprouter.Handle {
+	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+
+		txHex := p.ByName("data")
+
+		txBytes, err := hexutil.Decode(txHex)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid tx data: %v", err))
+			return
+		}
+
+		tx := &types.Transaction{}
+
+		if err := tx.UnmarshalJSON(txBytes); err != nil {
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("could not unmarshal tx JSON: %v", err))
+			return
+		}
+
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFunc()
+
+		if err := ethClient.SendTransaction(ctx, tx); err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
+			return
+		}
+
+		if err := respondWithJSON(w, http.StatusOK, &TxResponse{Txid: tx.Hash().Hex()}); err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 
 	})

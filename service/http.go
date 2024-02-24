@@ -32,32 +32,37 @@ func makeAPI(endpoints []endPoint) *api {
 	return r
 }
 
-func makeServiceAPIs(s *Service) *api {
+func makeProxyAPIs(ethCli SimpleEthClient) *api {
 	return makeAPI([]endPoint{
 		endPoint{
 			path:       StatusEndPnt,
-			handler:    s.Status(),
+			handler:    Status(),
 			methodType: http.MethodGet,
 		},
 		endPoint{
 			path:       HeathEndPnt,
-			handler:    s.Health(),
+			handler:    Health(ethCli),
 			methodType: http.MethodGet,
 		},
 		endPoint{
 			path:       EthBalanceEndPnt,
-			handler:    s.Balance(),
+			handler:    Balance(ethCli),
 			methodType: http.MethodGet,
 		},
 		endPoint{
 			path:       EthTx,
-			handler:    s.Tx(),
+			handler:    Tx(ethCli),
 			methodType: http.MethodGet,
 		},
 		endPoint{
 			path:       EthTxReceipt,
-			handler:    s.TxReceipt(),
+			handler:    TxReceipt(ethCli),
 			methodType: http.MethodGet,
+		},
+		endPoint{
+			path:       EthSendTx,
+			handler:    SendTx(ethCli),
+			methodType: http.MethodPut,
 		},
 	},
 	)

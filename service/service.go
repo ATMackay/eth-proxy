@@ -20,7 +20,7 @@ func New(port int, l *logrus.Entry, client SimpleEthClient) *Service {
 		ethClient: client,
 		logger:    l,
 	}
-	httpSrv := NewHTTPService(port, makeServiceAPIs(srv), l)
+	httpSrv := NewHTTPService(port, makeProxyAPIs(client), l)
 	srv.server = httpSrv
 	return srv
 }

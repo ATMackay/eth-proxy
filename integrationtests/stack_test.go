@@ -117,6 +117,25 @@ func Test_ConcurrentRequests(t *testing.T) {
 				200,
 			},
 		*/
+		/*
+			{
+				// Uncomment and execute 'make run' in a separate terminal and then this test to see how well the service handles concurrent requests
+				//
+				// Example output
+				//
+				//  ~/go/src/github.com/ATMackay/eth-proxy/integrationtests$ go test -v -run Test_ConcurrentRequests
+				//  === RUN   Test_ConcurrentRequests
+				//  === RUN   Test_ConcurrentRequests/real-stack
+				//  stack_test.go:133: real-stack: completed 200 requests in 1.039025218s seconds (192.49278152069297 req/s)
+				//
+				//
+				"real-stack",
+				func() string {
+					return "http://localhost:8080/eth/tx/0x326c7dbb58eaf646af01f7b6f4fb1e0fb1afe1329ac670ce5945e8fd940ec4d7"
+				},
+				200,
+			},
+		*/
 	}
 
 	for _, tt := range tests {
