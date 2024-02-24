@@ -49,6 +49,16 @@ func makeServiceAPIs(s *Service) *api {
 			handler:    s.Balance(),
 			methodType: http.MethodGet,
 		},
+		endPoint{
+			path:       EthTx,
+			handler:    s.Tx(),
+			methodType: http.MethodGet,
+		},
+		endPoint{
+			path:       EthTxReceipt,
+			handler:    s.TxReceipt(),
+			methodType: http.MethodGet,
+		},
 	},
 	)
 }

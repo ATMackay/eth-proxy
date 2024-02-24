@@ -16,11 +16,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	yaml "gopkg.in/yaml.v3"
 )
 
 const (
 	dummyAddr = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
+	dummtTxid = "0x326c7dbb58eaf646af01f7b6f4fb1e0fb1afe1329ac670ce5945e8fd940ec4d7"
+)
+
+var (
+	dummyTx = types.NewTx(&types.DynamicFeeTx{ChainID: big.NewInt(1)})
 )
 
 // Make sure to write some good tests
@@ -45,6 +51,14 @@ func (f *fakeEthClient) BlockNumber(context.Context) (uint64, error) {
 	return 0, nil
 }
 
+func (f *fakeEthClient) TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error) {
+	return dummyTx, false, nil
+}
+
+func (f *fakeEthClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (tx *types.Receipt, err error) {
+	return &types.Receipt{}, nil
+}
+
 type fakeEthClientWithErr struct {
 	err error
 }
@@ -65,6 +79,14 @@ func (f *fakeEthClientWithErr) BlockNumber(context.Context) (uint64, error) {
 	return 0, f.err
 }
 
+func (f *fakeEthClientWithErr) TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error) {
+	return &types.Transaction{}, false, f.err
+}
+
+func (f *fakeEthClientWithErr) TransactionReceipt(ctx context.Context, txHash common.Hash) (tx *types.Receipt, err error) {
+	return &types.Receipt{}, f.err
+}
+
 type fakeEthClientWithBlock struct {
 }
 
@@ -78,6 +100,14 @@ func (f *fakeEthClientWithBlock) BalanceAt(ctx context.Context, account common.A
 
 func (f *fakeEthClientWithBlock) BlockNumber(context.Context) (uint64, error) {
 	return rand.Uint64(), nil
+}
+
+func (f *fakeEthClientWithBlock) TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error) {
+	return &types.Transaction{}, false, nil
+}
+
+func (f *fakeEthClientWithBlock) TransactionReceipt(ctx context.Context, txHash common.Hash) (tx *types.Receipt, err error) {
+	return &types.Receipt{}, nil
 }
 
 func makeTestService(t *testing.T, urls string, constructor func(url string) (SimpleEthClient, error)) *Service {
@@ -334,6 +364,27 @@ func Test_API(t *testing.T) {
 			http.StatusOK,
 		},
 		{
+			"eth-tx",
+			"-",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
+			fmt.Sprintf("/eth/tx/%v", dummtTxid),
+			http.MethodGet,
+			&TxResponse{Tx: dummyTx, IsPending: false},
+			http.StatusOK,
+		},
+		{
+			"eth-tx-receipt",
+			"-",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
+			fmt.Sprintf("/eth/receipt/%v", dummtTxid),
+			http.MethodGet,
+			&types.Receipt{},
+			http.StatusOK,
+		},
+		//
+		// CLIENT ERRORS
+		//
+		{
 			"eth-balance-malformed",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
@@ -343,7 +394,7 @@ func Test_API(t *testing.T) {
 			http.StatusBadRequest,
 		},
 		//
-		// ETH NODE FAILURES
+		// SERVER ERRORS
 		//
 		{
 			"health-node-err",
@@ -359,6 +410,24 @@ func Test_API(t *testing.T) {
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
 			fmt.Sprintf("/eth/balance/%v", dummyAddr),
+			http.MethodGet,
+			map[string]string{"error": "eth client error: testErr"},
+			http.StatusInternalServerError,
+		},
+		{
+			"eth-tx-err",
+			"testErr",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
+			fmt.Sprintf("/eth/tx/%v", dummtTxid),
+			http.MethodGet,
+			map[string]string{"error": "eth client error: testErr"},
+			http.StatusInternalServerError,
+		},
+		{
+			"eth-receipt-err",
+			"testErr",
+			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
+			fmt.Sprintf("/eth/receipt/%v", dummtTxid),
 			http.MethodGet,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,

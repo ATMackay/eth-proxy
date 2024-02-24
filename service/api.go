@@ -8,14 +8,19 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/julienschmidt/httprouter"
 )
 
 const (
-	StatusEndPnt     = "/status"               // status endpoint for LIVENESS probing
-	HeathEndPnt      = "/health"               // health endpoint for READINESS probing
-	EthBalanceEndPnt = "/eth/balance/:address" // getBalance proxy endpoint (syntax compatible with httprouter Go web framework)
-	metricsEndPnt    = "/metrics"              // Prometheus metrics endpoint
+	StatusEndPnt = "/status" // status endpoint for LIVENESS probing
+	HeathEndPnt  = "/health" // health endpoint for READINESS probing
+
+	EthBalanceEndPnt = "/eth/balance/:address" // eth_getBalance proxy endpoint
+	EthTx            = "/eth/tx/:id"           // eth_getTransaction proxy endpoint
+	EthTxReceipt     = "/eth/receipt/:id"      // eth_getTransactionReceipt proxy endpoint
+
+	metricsEndPnt = "/metrics" // Prometheus metrics endpoint
 )
 
 // StatusResponse contains status response fields.
@@ -104,4 +109,74 @@ func (s *Service) Balance() httprouter.Handle {
 
 	})
 
+}
+
+// TxResponse contains ethereum transaction data and a pending flag.
+type TxResponse struct {
+	Tx        *types.Transaction `json:"tx"`
+	IsPending bool               `json:"is_pending"`
+}
+
+// Tx handles the eth_getTransaction proxy endpoint.
+func (s *Service) Tx() httprouter.Handle {
+	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+
+		txid := p.ByName("id")
+
+		txHash := common.HexToHash(txid)
+
+		if len(txHash.Bytes()) != 32 {
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid hash"))
+			return
+		}
+
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFunc()
+		tx, pending, err := s.ethClient.TransactionByHash(ctx, txHash)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
+			return
+		}
+
+		if err := respondWithJSON(w, http.StatusOK, &TxResponse{Tx: tx, IsPending: pending}); err != nil {
+			s.logger.Error(err)
+		}
+
+	})
+}
+
+// TxResponse contains ethereum transaction data and a pending flag.
+type TxReceiptResponse *types.Receipt
+
+// Tx handles the eth_getTransaction proxy endpoint.
+func (s *Service) TxReceipt() httprouter.Handle {
+	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+
+		txid := p.ByName("id")
+
+		txHash := common.HexToHash(txid)
+
+		if len(txHash.Bytes()) != 32 {
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid hash"))
+			return
+		}
+
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFunc()
+		tx, err := s.ethClient.TransactionReceipt(ctx, txHash)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("eth client error: %v", err))
+			return
+		}
+
+		if tx == nil {
+			respondWithError(w, http.StatusNotFound, fmt.Errorf("not found"))
+			return
+		}
+
+		if err := respondWithJSON(w, http.StatusOK, &tx); err != nil {
+			s.logger.Error(err)
+		}
+
+	})
 }
