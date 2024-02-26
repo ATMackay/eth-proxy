@@ -22,7 +22,7 @@ type SimpleEthClient interface {
 	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) // queries eth balance at the specified block. If nil blockNumber is supplied the node will return the latest confirmed balance.
 }
 
-// NewEthClient wraps the connector to the goven URL
+// NewEthClient wraps the connector to the given URL
 func NewEthClient(url string) (SimpleEthClient, error) {
 	return ethclient.Dial(url)
 }

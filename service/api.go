@@ -20,9 +20,11 @@ const (
 	EthBalanceEndPnt = "/eth/balance/:address" // eth_getBalance proxy endpoint
 	EthTx            = "/eth/tx/hash/:id"      // eth_getTransaction proxy endpoint
 	EthTxReceipt     = "/eth/tx/receipt/:id"   // eth_getTransactionReceipt proxy endpoint
-	EthSendTx        = "/eth/tx/new/:data"     // eth_sendRawTransaction proxy endpoint
+	EthSendTx        = "/eth/tx/new/:txdata"   // eth_sendRawTransaction proxy endpoint
 
 	metricsEndPnt = "/metrics" // Prometheus metrics endpoint
+
+	timeout = 5 * time.Second
 )
 
 // StatusResponse contains status response fields.
@@ -61,7 +63,7 @@ func Health(ethClient SimpleEthClient) httprouter.Handle {
 		var httpCode = http.StatusOK
 
 		// check clients
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 		defer cancelFunc()
 		if _, err := ethClient.BlockNumber(ctx); err != nil {
 			failureArray := strings.Split(err.Error(), "|")
@@ -97,7 +99,7 @@ func Balance(ethClient SimpleEthClient) httprouter.Handle {
 			return
 		}
 
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 		defer cancelFunc()
 		b, err := ethClient.BalanceAt(ctx, common.HexToAddress(address), nil)
 		if err != nil {
@@ -133,7 +135,7 @@ func Tx(ethClient SimpleEthClient) httprouter.Handle {
 			return
 		}
 
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 		defer cancelFunc()
 		tx, pending, err := ethClient.TransactionByHash(ctx, txHash)
 		if err != nil {
@@ -164,7 +166,7 @@ func TxReceipt(ethClient SimpleEthClient) httprouter.Handle {
 			return
 		}
 
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 		defer cancelFunc()
 		tx, err := ethClient.TransactionReceipt(ctx, txHash)
 		if err != nil {
@@ -188,7 +190,7 @@ func TxReceipt(ethClient SimpleEthClient) httprouter.Handle {
 func SendTx(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
-		txHex := p.ByName("data")
+		txHex := p.ByName("txdata")
 
 		txBytes, err := hexutil.Decode(txHex)
 		if err != nil {
@@ -203,7 +205,7 @@ func SendTx(ethClient SimpleEthClient) httprouter.Handle {
 			return
 		}
 
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 		defer cancelFunc()
 
 		if err := ethClient.SendTransaction(ctx, tx); err != nil {
