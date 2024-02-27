@@ -50,6 +50,13 @@ func Test_E2EStackRead(t *testing.T) {
 			&service.BalanceResp{Balance: oneEther.String()},
 			http.StatusOK,
 		},
+		{
+			"metrics",
+			func() string { return "/metrics" },
+			http.MethodGet,
+			nil,
+			http.StatusOK,
+		},
 	}
 
 	time.Sleep(10 * time.Millisecond)
@@ -70,11 +77,15 @@ func Test_E2EStackRead(t *testing.T) {
 				t.Errorf("%v unexpected response code, want %v got %v", tt.name, w, g)
 			}
 
-			expectedJSON, _ := json.Marshal(tt.expectedResponse)
+			if tt.expectedResponse != nil {
 
-			if g, w := b, expectedJSON; !bytes.Equal(g, w) {
-				t.Errorf("%v unexpected response, want %s, got %s", tt.name, w, g)
+				expectedJSON, _ := json.Marshal(tt.expectedResponse)
+
+				if g, w := b, expectedJSON; !bytes.Equal(g, w) {
+					t.Errorf("%v unexpected response, want %s, got %s", tt.name, w, g)
+				}
 			}
+
 		})
 
 	}
