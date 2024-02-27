@@ -3,6 +3,7 @@ package integrationtests
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
 	"github.com/ethereum/go-ethereum/log"
@@ -31,7 +33,7 @@ var (
 )
 
 func executeRequest(methodType, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), methodType, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +44,11 @@ func executeRequest(methodType, url string) (*http.Response, error) {
 		return nil, err
 	}
 	return response, nil
+}
+
+type svcStack struct {
+	eth     *ethereumStack
+	service *service.Service
 }
 
 func makeEthProxyService(t testing.TB) *svcStack {
@@ -70,8 +77,10 @@ func makeEthProxyService(t testing.TB) *svcStack {
 
 	t.Cleanup(func() { svc.Stop(os.Kill) })
 
+	ethStack := ethereumStack{backend: bk, txs: make(map[uint64]*types.Transaction)}
+
 	return &svcStack{
-		node:    &ethereumStack{bk},
+		eth:     &ethStack,
 		service: svc,
 	}
 
@@ -131,42 +140,74 @@ func createEOA(t testing.TB) *eoa {
 
 type ethereumStack struct {
 	backend *blockchainBackend
+	txs     map[uint64]*types.Transaction // in-memory map of confirmed txs
 }
 
-type svcStack struct {
-	node    *ethereumStack
-	service *service.Service
+func (e *ethereumStack) addTx() error {
+	tx, err := e.backend.newTx()
+	if err != nil {
+		return err
+	}
+
+	// send tx
+	if err := e.backend.Client().SendTransaction(context.Background(), tx); err != nil {
+		return err
+	}
+
+	_ = e.backend.Commit() // commit transaction, move the chain forward
+
+	blkNum, err := e.backend.Client().BlockNumber(context.Background())
+	if err != nil {
+		return err
+	}
+	e.txs[blkNum] = tx
+	return nil
 }
 
-// TODO - create more scenarios in the stack to test
-//
-//func (b *blockchainBackend) newTx() (*types.Transaction, error) {
-//
-//	client := b.Client()
-//	key := b.bankAccount.PrivateKey
-//
-//	// create a signed transaction to send
-//	head, err := client.HeaderByNumber(context.Background(), nil) // Should be child's, good enough
-//	if err != nil {
-//		return nil, err
-//	}
-//	gasPrice := new(big.Int).Add(head.BaseFee, big.NewInt(params.GWei))
-//	addr := crypto.PubkeyToAddress(key.PublicKey)
-//	chainid, err := client.ChainID(context.Background())
-//	if err != nil {
-//		return nil, err
-//	}
-//	nonce, err := client.PendingNonceAt(context.Background(), addr)
-//	if err != nil {
-//		return nil, err
-//	}
-//	tx := types.NewTx(&types.DynamicFeeTx{
-//		ChainID:   chainid,
-//		Nonce:     nonce,
-//		GasTipCap: big.NewInt(params.GWei),
-//		GasFeeCap: gasPrice,
-//		Gas:       21000,
-//		To:        common.HexToAddress(dummyAddr),
-//	})
-//	return types.SignTx(tx, types.LatestSignerForChainID(chainid), key)
-//}
+func (b *blockchainBackend) newTx() (*types.Transaction, error) {
+
+	client := b.Client()
+
+	key := b.bankAccount.PrivateKey
+
+	// create a signed transaction to send
+	head, err := client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, err
+	}
+	gasPrice := new(big.Int).Add(head.BaseFee, big.NewInt(params.GWei))
+
+	fromAddr := crypto.PubkeyToAddress(key.PublicKey)
+	chainid, err := client.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	bal, err := client.PendingBalanceAt(context.Background(), fromAddr)
+	if err != nil {
+		return nil, err
+	}
+	if bal.Cmp(new(big.Int).Mul(gasPrice, big.NewInt(21000))) < 0 {
+		return nil, fmt.Errorf("insufficient balance %v below (gasPrice) %v x (gasUnit) %v", bal, gasPrice, 21000)
+	}
+
+	// send half of the tx balance
+	sendAmount := bal.Div(bal, big.NewInt(2))
+
+	toAddr := common.HexToAddress(dummyAddr)
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainid,
+		Nonce:     nonce,
+		GasTipCap: big.NewInt(params.GWei),
+		GasFeeCap: gasPrice,
+		Gas:       21000,
+		To:        &toAddr,
+		Value:     sendAmount,
+	})
+	return types.SignTx(tx, types.LatestSignerForChainID(chainid), key)
+}

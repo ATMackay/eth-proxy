@@ -383,7 +383,7 @@ func Test_API(t *testing.T) {
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
 			func() string {
-				b, _ := dummyTx.MarshalJSON()
+				b, _ := dummyTx.MarshalBinary()
 				return fmt.Sprintf("/eth/tx/new/0x%x", b)
 			},
 			http.MethodPut,
@@ -457,7 +457,7 @@ func Test_API(t *testing.T) {
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
 			func() string {
-				b, _ := dummyTx.MarshalJSON()
+				b, _ := dummyTx.MarshalBinary()
 				return fmt.Sprintf("/eth/tx/new/0x%x", b)
 			},
 			http.MethodPut,

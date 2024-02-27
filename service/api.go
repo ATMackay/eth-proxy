@@ -200,7 +200,7 @@ func SendTx(ethClient SimpleEthClient) httprouter.Handle {
 
 		tx := &types.Transaction{}
 
-		if err := tx.UnmarshalJSON(txBytes); err != nil {
+		if err := tx.UnmarshalBinary(txBytes); err != nil {
 			respondWithError(w, http.StatusBadRequest, fmt.Errorf("could not unmarshal tx JSON: %v", err))
 			return
 		}
