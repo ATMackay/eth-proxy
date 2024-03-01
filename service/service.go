@@ -9,18 +9,17 @@ import (
 // Service is the main application struct containing a SimpleEthClient
 // the http server and logger. It can be called to start and stop.
 type Service struct {
-	ethClient SimpleEthClient
-	server    *hTTPService
-	logger    *logrus.Entry
+	server *hTTPService
+	logger *logrus.Entry
 }
 
 // New constructs a Service with ethclient, logger and http server.
 func New(port int, l *logrus.Entry, client SimpleEthClient) *Service {
 	srv := &Service{
-		ethClient: client,
-		logger:    l,
+		logger: l,
 	}
-	httpSrv := NewHTTPService(port, makeServiceAPIs(srv), l)
+	api := makeProxyAPIs(client)
+	httpSrv := NewHTTPService(port, api, l)
 	srv.server = httpSrv
 	return srv
 }

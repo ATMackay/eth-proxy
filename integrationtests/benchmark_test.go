@@ -12,7 +12,7 @@ import (
 func BenchmarkConcurrentRequests(b *testing.B) {
 
 	stack := makeEthProxyService(b)
-	genesisAddr := stack.node.backend.bankAccount.From
+	genesisAddr := stack.eth.backend.bankAccount.From
 	endpnt := fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
 	time.Sleep(10 * time.Millisecond)
 	url := fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), endpnt)

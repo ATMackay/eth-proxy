@@ -10,16 +10,19 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // SimpleEthClient exposes the eth_getBalance wrapper from the go-ethereum library
 type SimpleEthClient interface {
+	ethereum.BlockNumberReader
+	ethereum.TransactionReader
+	ethereum.TransactionSender
 	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) // queries eth balance at the specified block. If nil blockNumber is supplied the node will return the latest confirmed balance.
-	ethereum.BlockNumberReader                                                                     // Used for healthcheck/readiness probe
 }
 
-// NewEthClient wraps the connector to the goven URL
+// NewEthClient wraps the connector to the given URL
 func NewEthClient(url string) (SimpleEthClient, error) {
 	return ethclient.Dial(url)
 }
@@ -84,35 +87,20 @@ func (m *multiNodeClient) increaseNodePriority(position int, id string) {
 	m.nodes[position-1], m.nodes[position] = m.nodes[position], m.nodes[position-1]
 }
 
-// multiNodeCall is a generic pattern for any request RPC to multiple Ethereum clients that terminates
-// at the first successful request. Any changes to node selection or prioritization logic
-// should be made here.
-func multiNodeCall[result any, request func() (string, result, error)](m *multiNodeClient, requests []request) (out result, err error) {
-	for i := 0; i < len(requests); i++ {
-		var id string
-		id, out, err = requests[i]()
-		if err == nil {
-			m.increaseNodePriority(i, id)
-			break
-		}
-	}
-	return
-}
-
 // BalanceAt prepares a balance query to all nodes in the multiNodeClient set.
-func (m *multiNodeClient) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	var requests []func() (string, *big.Int, error)
+func (m *multiNodeClient) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (bal *big.Int, err error) {
 	for i := 0; i < len(m.nodes); i++ {
 		index := i
 		m.mu.RLock()
 		node := m.nodes[index]
+		bal, err = node.client.BalanceAt(ctx, account, blockNumber)
 		m.mu.RUnlock()
-		requests = append(requests, func() (string, *big.Int, error) {
-			res, err := node.client.BalanceAt(ctx, account, blockNumber)
-			return node.id, res, err
-		})
+		if err == nil {
+			m.increaseNodePriority(i, node.id)
+			break
+		}
 	}
-	return multiNodeCall(m, requests)
+	return
 }
 
 const blockDiff = 3 // criteria for reporting failure based on two connected clients reporting different block numbers
@@ -152,4 +140,59 @@ func (m *multiNodeClient) BlockNumber(ctx context.Context) (uint64, error) {
 		return 0, errors.New(errStr)
 	}
 	return blockheights[0], nil
+}
+
+// TransactionByHash checks the pool of pending transactions in addition to the
+// blockchain. The isPending return value indicates whether the transaction has been
+// mined yet. Note that the transaction may not be part of the canonical chain even if
+// it's not pending.
+func (m *multiNodeClient) TransactionByHash(ctx context.Context, txHash common.Hash) (tx *types.Transaction, isPending bool, err error) {
+	for i := 0; i < len(m.nodes); i++ {
+		index := i
+		m.mu.RLock()
+		node := m.nodes[index]
+		tx, isPending, err = node.client.TransactionByHash(ctx, txHash)
+		m.mu.RUnlock()
+		if err == nil {
+			m.increaseNodePriority(i, node.id)
+			break
+		}
+	}
+	return
+}
+
+// TransactionReceipt returns the receipt of a mined transaction. Note that the
+// transaction may not be included in the current canonical chain even if a receipt
+// exists.
+func (m *multiNodeClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (receipt *types.Receipt, err error) {
+	for i := 0; i < len(m.nodes); i++ {
+		index := i
+		m.mu.RLock()
+		node := m.nodes[index]
+		receipt, err = node.client.TransactionReceipt(ctx, txHash)
+		m.mu.RUnlock()
+		if err == nil {
+			m.increaseNodePriority(i, node.id)
+			break
+		}
+	}
+	return
+}
+
+// SendTransaction method injects a signed transaction into the pending transaction pool for execution. If the transaction
+// was a contract creation, the TransactionReceipt method can be used to retrieve the
+// contract address after the transaction has been mined.
+func (m *multiNodeClient) SendTransaction(ctx context.Context, tx *types.Transaction) (err error) {
+	for i := 0; i < len(m.nodes); i++ {
+		index := i
+		m.mu.RLock()
+		node := m.nodes[index]
+		err = node.client.SendTransaction(ctx, tx)
+		m.mu.RUnlock()
+		if err == nil {
+			m.increaseNodePriority(i, node.id)
+			break
+		}
+	}
+	return
 }
