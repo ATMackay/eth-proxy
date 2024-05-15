@@ -34,35 +34,35 @@ func makeAPI(endpoints []endPoint) *api {
 
 func makeProxyAPIs(ethCli SimpleEthClient) *api {
 	return makeAPI([]endPoint{
-		endPoint{
+		{
 			path:       StatusEndPnt,
 			handler:    Status(),
 			methodType: http.MethodGet,
 		},
-		endPoint{
+		{
 			path:       HeathEndPnt,
 			handler:    Health(ethCli),
 			methodType: http.MethodGet,
 		},
-		endPoint{
+		{
 			path:       EthBalanceEndPnt,
 			handler:    Balance(ethCli),
 			methodType: http.MethodGet,
 		},
-		endPoint{
+		{
 			path:       EthTx,
 			handler:    Tx(ethCli),
 			methodType: http.MethodGet,
 		},
-		endPoint{
+		{
 			path:       EthTxReceipt,
 			handler:    TxReceipt(ethCli),
 			methodType: http.MethodGet,
 		},
-		endPoint{
+		{
 			path:       EthSendTx,
 			handler:    SendTx(ethCli),
-			methodType: http.MethodPut,
+			methodType: http.MethodPost,
 		},
 	},
 	)
@@ -192,13 +192,6 @@ func respondWithJSON(w http.ResponseWriter, code int, payload any) error {
 	return err
 }
 
-func respondWithError(w http.ResponseWriter, code int, msg any) {
-	var message string
-	switch m := msg.(type) {
-	case error:
-		message = m.Error()
-	case string:
-		message = m
-	}
-	_ = respondWithJSON(w, code, map[string]string{"error": message})
+func respondWithError(w http.ResponseWriter, code int, err error) {
+	_ = respondWithJSON(w, code, JSONError{Error: err.Error()})
 }

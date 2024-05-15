@@ -47,7 +47,7 @@ func Test_E2EStackRead(t *testing.T) {
 				return fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
 			},
 			http.MethodGet,
-			&service.BalanceResp{Balance: oneEther.String()},
+			&service.BalanceResponse{Balance: oneEther.String()},
 			http.StatusOK,
 		},
 		{
@@ -206,7 +206,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	balData := &service.BalanceResp{}
+	balData := &service.BalanceResponse{}
 	if err := json.Unmarshal(b, balData); err != nil {
 		t.Fatalf("could not unmarshal response json: %v", err)
 	}

@@ -84,7 +84,7 @@ func Health(ethClient SimpleEthClient) httprouter.Handle {
 }
 
 // BalanceResp contains balance value formatted as a string.
-type BalanceResp struct {
+type BalanceResponse struct {
 	Balance string `json:"balance"`
 }
 
@@ -107,7 +107,7 @@ func Balance(ethClient SimpleEthClient) httprouter.Handle {
 			return
 		}
 
-		if err := respondWithJSON(w, http.StatusOK, &BalanceResp{Balance: b.String()}); err != nil {
+		if err := respondWithJSON(w, http.StatusOK, &BalanceResponse{Balance: b.String()}); err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 
@@ -149,9 +149,6 @@ func Tx(ethClient SimpleEthClient) httprouter.Handle {
 
 	})
 }
-
-// TxResponse contains ethereum transaction data and a pending flag.
-type TxReceiptResponse *types.Receipt
 
 // TxReceipt returns a handler for the eth_getTransactionReceipt proxy endpoint.
 func TxReceipt(ethClient SimpleEthClient) httprouter.Handle {
