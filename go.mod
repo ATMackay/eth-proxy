@@ -3,7 +3,7 @@ module github.com/ATMackay/eth-proxy
 go 1.22.0
 
 require (
-	github.com/ethereum/go-ethereum v1.13.15
+	github.com/ethereum/go-ethereum v1.14.3
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/sirupsen/logrus v1.9.3
