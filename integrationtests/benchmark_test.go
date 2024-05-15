@@ -7,15 +7,19 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/ATMackay/eth-proxy/internal/stack"
 )
 
 func BenchmarkConcurrentRequests(b *testing.B) {
 
-	stack := makeEthProxyService(b)
-	genesisAddr := stack.eth.backend.bankAccount.From
+	s := stack.MockEthProxyService(b, "error")
+
+	genesisAddr := s.Eth.Backend.BankAccount.From
+
 	endpnt := fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
 	time.Sleep(10 * time.Millisecond)
-	url := fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), endpnt)
+	url := fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), endpnt)
 
 	var wg sync.WaitGroup
 

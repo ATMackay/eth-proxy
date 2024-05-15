@@ -9,7 +9,7 @@ run: build
 	cd build && ./eth-proxy --config ../config.yml
 
 test: 
-	go test -v -cover ./service
+	go test -v -cover ./service ./client
 
 test-stack:
 	go test -v -cover ./integrationtests
