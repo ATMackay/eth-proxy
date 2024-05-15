@@ -12,7 +12,6 @@ import (
 	"github.com/ATMackay/eth-proxy/service"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
@@ -111,7 +110,7 @@ func newEthBackend(t testing.TB, accounts ...common.Address) *blockchainBackend 
 
 func simTestBackend(testAddr common.Address) *simulated.Backend {
 	return simulated.NewBackend(
-		core.GenesisAlloc{
+		types.GenesisAlloc{
 			testAddr: {Balance: oneEther},
 		},
 	)
