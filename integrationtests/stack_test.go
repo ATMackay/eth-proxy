@@ -11,13 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ATMackay/eth-proxy/internal/stack"
 	"github.com/ATMackay/eth-proxy/service"
 )
 
 // Test E2E flows against an in-memory Ethereum server.
 func Test_E2EStackRead(t *testing.T) {
 
-	stack := makeEthProxyService(t)
+	s := stack.MockEthProxyService(t, "error")
 
 	apiTests := []struct {
 		name             string
@@ -43,11 +44,11 @@ func Test_E2EStackRead(t *testing.T) {
 		{
 			"eth-balance",
 			func() string {
-				genesisAddr := stack.eth.backend.bankAccount.From
+				genesisAddr := s.Eth.Backend.BankAccount.From
 				return fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
 			},
 			http.MethodGet,
-			&service.BalanceResp{Balance: oneEther.String()},
+			&service.BalanceResponse{Balance: stack.OneEther.String()},
 			http.StatusOK,
 		},
 		{
@@ -62,7 +63,7 @@ func Test_E2EStackRead(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	for _, tt := range apiTests {
 		t.Run(tt.name, func(t *testing.T) {
-			response, err := executeRequest(tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), tt.endpoint()))
+			response, err := executeRequest(tt.methodType, fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), tt.endpoint()))
 			if err != nil {
 				t.Fatalf("%v: %v", tt.name, err)
 			}
@@ -94,12 +95,12 @@ func Test_E2EStackRead(t *testing.T) {
 
 func Test_E2EStackTxWrite(t *testing.T) {
 
-	stack := makeEthProxyService(t)
+	s := stack.MockEthProxyService(t, "error")
 
 	time.Sleep(10 * time.Millisecond)
 
 	// Check system health
-	response, err := executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), service.HeathEndPnt))
+	response, err := executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), service.HeathEndPnt))
 	if err != nil {
 		t.Fatalf("healthcheck err: %v", err)
 	}
@@ -111,7 +112,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 
 	// create transaction using backend client
 
-	tx, err := stack.eth.backend.newTx()
+	tx, err := s.Eth.Backend.NewTx()
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -126,7 +127,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 
 	// Send transaction via proxy
-	response, err = executeRequest(http.MethodPut, fmt.Sprintf("http://0.0.0.0%v/eth/tx/new/0x%x", stack.service.Server().Addr(), txBin))
+	response, err = executeRequest(http.MethodPost, fmt.Sprintf("http://0.0.0.0%v/eth/tx/new/0x%x", s.Service.Server().Addr(), txBin))
 	if err != nil {
 		t.Fatalf("tx send err: %v", err)
 	}
@@ -149,13 +150,13 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 
 	// Move the chain forward
-	n, err := stack.eth.backend.Client().BlockNumber(context.Background())
+	n, err := s.Eth.Backend.Client().BlockNumber(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	blkHash := stack.eth.backend.Commit()
+	blkHash := s.Eth.Backend.Commit()
 	t.Logf("new block: %v", blkHash.Hex())
-	m, err := stack.eth.backend.Client().BlockNumber(context.Background())
+	m, err := s.Eth.Backend.Client().BlockNumber(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +166,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 
 	// query tx by transactionID
 
-	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v/eth/tx/hash/%v", stack.service.Server().Addr(), txHash.Hex()))
+	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v/eth/tx/hash/%v", s.Service.Server().Addr(), txHash.Hex()))
 	if err != nil {
 		t.Fatalf("tx send err: %v", err)
 	}
@@ -195,7 +196,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 
 	// query destination address balance
-	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v/eth/balance/%v", stack.service.Server().Addr(), toAddr.Hex()))
+	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v/eth/balance/%v", s.Service.Server().Addr(), toAddr.Hex()))
 	if err != nil {
 		t.Fatalf("tx send err: %v", err)
 	}
@@ -206,7 +207,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	balData := &service.BalanceResp{}
+	balData := &service.BalanceResponse{}
 	if err := json.Unmarshal(b, balData); err != nil {
 		t.Fatalf("could not unmarshal response json: %v", err)
 	}
@@ -218,9 +219,10 @@ func Test_E2EStackTxWrite(t *testing.T) {
 
 func Test_ConcurrentRequests(t *testing.T) {
 
-	stack := makeEthProxyService(t)
-	genesisAddr := stack.eth.backend.bankAccount.From
-	if err := stack.eth.addTx(); err != nil {
+	s := stack.MockEthProxyService(t, "error")
+
+	genesisAddr := s.Eth.Backend.BankAccount.From
+	if err := s.Eth.AddTx(); err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
@@ -233,15 +235,15 @@ func Test_ConcurrentRequests(t *testing.T) {
 		{
 			"mock-stack-read-balance",
 			func() string {
-				return fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex()))
+				return fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex()))
 			},
 			100,
 		},
 		{
 			"mock-stack-read-txid",
 			func() string {
-				tx := stack.eth.txs[1]
-				return fmt.Sprintf("http://0.0.0.0%v%v", stack.service.Server().Addr(), fmt.Sprintf("/eth/tx/hash/%v", tx.Hash().Hex()))
+				tx := s.Eth.Txs[1]
+				return fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), fmt.Sprintf("/eth/tx/hash/%v", tx.Hash().Hex()))
 			},
 			100,
 		},

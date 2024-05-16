@@ -23,9 +23,11 @@ jobs:
     - name: build
       run: go build -v ./...
 
-    - name: unit-test
-      run: go test -v -cover ./service/...
+    - name: unit-test-server
+      run: go test -v -cover ./service
 
+    - name: unit-test-client
+      run: go test -v -cover ./client
 
   golangci:
     runs-on: ubuntu-latest

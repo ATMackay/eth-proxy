@@ -357,7 +357,7 @@ func Test_API(t *testing.T) {
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
 			func() string { return fmt.Sprintf("/eth/balance/%v", dummyAddr) },
 			http.MethodGet,
-			&BalanceResp{Balance: "0"},
+			&BalanceResponse{Balance: "0"},
 			http.StatusOK,
 		},
 		{
@@ -386,7 +386,7 @@ func Test_API(t *testing.T) {
 				b, _ := dummyTx.MarshalBinary()
 				return fmt.Sprintf("/eth/tx/new/0x%x", b)
 			},
-			http.MethodPut,
+			http.MethodPost,
 			&TxResponse{Txid: dummyTx.Hash().Hex()},
 			http.StatusOK,
 		},
@@ -409,7 +409,7 @@ func Test_API(t *testing.T) {
 			func() string {
 				return "/eth/tx/new/0xnotATx"
 			},
-			http.MethodPut,
+			http.MethodPost,
 			map[string]string{"error": "invalid tx data: invalid hex string"},
 			http.StatusBadRequest,
 		},
@@ -460,7 +460,7 @@ func Test_API(t *testing.T) {
 				b, _ := dummyTx.MarshalBinary()
 				return fmt.Sprintf("/eth/tx/new/0x%x", b)
 			},
-			http.MethodPut,
+			http.MethodPost,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
 		},
