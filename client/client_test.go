@@ -2,17 +2,20 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/ATMackay/eth-proxy/internal/stack"
+	"github.com/ATMackay/eth-proxy/service"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestClient(t *testing.T) {
 
-	// Use mock stack to execute tests - TODO
+	// Use mock stack to execute tests
 
 	s := stack.MockEthProxyService(t, "error")
 
@@ -74,13 +77,17 @@ func TestClient(t *testing.T) {
 
 	tx, err := s.Eth.Backend.NewTx()
 	if err != nil {
-		t.Fatalf("%v", err)
+		t.Fatal(err)
 	}
 
 	toAddr := tx.To()
 	txHash := tx.Hash()
 	amount := tx.Value()
 
+	b, err := tx.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Run("send-tx", func(t *testing.T) {
 		t.Logf("sending %v ETH to %v", amount, toAddr.Hex())
 		txResp, err := cl.SendTransaction(ctx, tx)
@@ -115,6 +122,23 @@ func TestClient(t *testing.T) {
 		}
 		if rec.BlockHash.Cmp(blkHash) != 0 {
 			t.Fatalf("unexpted blockHash, got %v want %v", rec.BlockHash.Hex(), blkHash.Hex())
+		}
+	})
+
+	// errors
+	t.Run("context-cancelled", func(t *testing.T) {
+		ctxCancelled, cancelFunc := context.WithCancel(ctx)
+		cancelFunc()
+		if _, err := cl.Status(ctxCancelled); !errors.Is(err, ctxCancelled.Err()) {
+			t.Fatalf("expected error %v, got %v", ctxCancelled.Err(), err)
+		}
+	})
+
+	t.Run("method-not-allowed", func(t *testing.T) {
+		var txResponse service.TxResponse
+		// incorrect verb
+		if err := cl.executeRequest(ctx, &txResponse, http.MethodPut, fmt.Sprintf("/eth/tx/new/0x%x", b), tx); !errors.Is(err, ErrMethodNotAllowed) {
+			t.Fatalf("expected error got %v", err)
 		}
 	})
 }

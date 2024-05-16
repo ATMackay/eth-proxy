@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
+
+var ErrMethodNotAllowed = errors.New("method not allowed")
 
 type Client struct {
 	baseURL string
@@ -127,7 +130,10 @@ func (client *Client) sendHTTP(ctx context.Context, op *requestOp, result any) e
 	}
 
 	// process resp or error
-	if status > 399 {
+	if status >= http.StatusBadRequest {
+		if status == http.StatusMethodNotAllowed {
+			return fmt.Errorf("method: '%v', path: '%v' %w", op.method, op.path, ErrMethodNotAllowed)
+		}
 		errMsg := service.JSONError{}
 		if err := json.NewDecoder(respBody).Decode(&errMsg); err != nil {
 			return err
