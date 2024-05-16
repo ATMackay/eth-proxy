@@ -83,7 +83,7 @@ func (client *Client) SendTransaction(ctx context.Context, tx *types.Transaction
 		return nil, err
 	}
 	var txResponse service.TxResponse
-	if err := client.executeRequest(ctx, &txResponse, http.MethodPost, fmt.Sprintf("/eth/tx/new/%x", b), nil); err != nil {
+	if err := client.executeRequest(ctx, &txResponse, http.MethodPost, fmt.Sprintf("/eth/tx/new/0x%x", b), nil); err != nil {
 		return nil, err
 	}
 	return &txResponse, nil
