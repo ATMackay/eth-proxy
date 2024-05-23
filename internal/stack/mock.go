@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ATMackay/eth-proxy/service"
+	"github.com/ATMackay/eth-proxy/proxy"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -18,20 +18,20 @@ func MockEthProxyService(t testing.TB, logLevel string) *SvcStack {
 	t.Cleanup(func() { bk.Close() })
 
 	// create proxy service
-	cfg := &service.Config{
+	cfg := &proxy.Config{
 		Port:      8080,
 		LogLevel:  logLevel, // change to 'info' or 'debug' to see the proxy service logs
 		LogFormat: "plain",
 	}
 
-	l, err := service.NewLogger(cfg.LogLevel, cfg.LogFormat)
+	l, err := proxy.NewLogger(cfg.LogLevel, cfg.LogFormat)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ethClient := bk.Client()
 
-	svc := service.New(cfg.Port, l, ethClient)
+	svc := proxy.New(cfg.Port, l, ethClient)
 
 	svc.Start()
 

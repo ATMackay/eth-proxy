@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/ATMackay/eth-proxy/service"
+	"github.com/ATMackay/eth-proxy/proxy"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -40,33 +40,33 @@ func makeDefaultHeaders() http.Header {
 	return h
 }
 
-func (client *Client) Status(ctx context.Context) (*service.StatusResponse, error) {
-	var status service.StatusResponse
-	if err := client.executeRequest(ctx, &status, http.MethodGet, service.StatusEndPnt, nil); err != nil {
+func (client *Client) Status(ctx context.Context) (*proxy.StatusResponse, error) {
+	var status proxy.StatusResponse
+	if err := client.executeRequest(ctx, &status, http.MethodGet, proxy.StatusEndPnt, nil); err != nil {
 		return nil, err
 	}
 	return &status, nil
 }
 
-func (client *Client) Health(ctx context.Context) (*service.HealthResponse, error) {
-	var health service.HealthResponse
-	if err := client.executeRequest(ctx, &health, http.MethodGet, service.HeathEndPnt, nil); err != nil {
+func (client *Client) Health(ctx context.Context) (*proxy.HealthResponse, error) {
+	var health proxy.HealthResponse
+	if err := client.executeRequest(ctx, &health, http.MethodGet, proxy.HeathEndPnt, nil); err != nil {
 		return nil, err
 	}
 	return &health, nil
 }
 
-func (client *Client) Balance(ctx context.Context, address common.Address) (*service.BalanceResponse, error) {
-	var balance service.BalanceResponse
-	if err := client.executeRequest(ctx, &balance, http.MethodGet, fmt.Sprintf("/eth/balance/%v", address.Hex()), nil); err != nil {
+func (client *Client) Balance(ctx context.Context, address common.Address) (*proxy.BalanceResponse, error) {
+	var balance proxy.BalanceResponse
+	if err := client.executeRequest(ctx, &balance, http.MethodGet, fmt.Sprintf("%v%v", proxy.EthV0BalancePrfx, address.Hex()), nil); err != nil {
 		return nil, err
 	}
 	return &balance, nil
 }
 
-func (client *Client) TransactionByHash(ctx context.Context, hash common.Hash) (*service.TxResponse, error) {
-	var txResponse service.TxResponse
-	if err := client.executeRequest(ctx, &txResponse, http.MethodGet, fmt.Sprintf("/eth/tx/hash/%v", hash.Hex()), nil); err != nil {
+func (client *Client) TransactionByHash(ctx context.Context, hash common.Hash) (*proxy.TxResponse, error) {
+	var txResponse proxy.TxResponse
+	if err := client.executeRequest(ctx, &txResponse, http.MethodGet, fmt.Sprintf("%v%v", proxy.EthV0TxPrfx, hash.Hex()), nil); err != nil {
 		return nil, err
 	}
 	return &txResponse, nil
@@ -74,19 +74,19 @@ func (client *Client) TransactionByHash(ctx context.Context, hash common.Hash) (
 
 func (client *Client) TransactionReceipt(ctx context.Context, hash common.Hash) (*types.Receipt, error) {
 	var receipt types.Receipt
-	if err := client.executeRequest(ctx, &receipt, http.MethodGet, fmt.Sprintf("/eth/tx/receipt/%v", hash.Hex()), nil); err != nil {
+	if err := client.executeRequest(ctx, &receipt, http.MethodGet, fmt.Sprintf("%v%v", proxy.EthV0TxReceiptPrfx, hash.Hex()), nil); err != nil {
 		return nil, err
 	}
 	return &receipt, nil
 }
 
-func (client *Client) SendTransaction(ctx context.Context, tx *types.Transaction) (*service.TxResponse, error) {
+func (client *Client) SendTransaction(ctx context.Context, tx *types.Transaction) (*proxy.TxResponse, error) {
 	b, err := tx.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	var txResponse service.TxResponse
-	if err := client.executeRequest(ctx, &txResponse, http.MethodPost, fmt.Sprintf("/eth/tx/new/0x%x", b), nil); err != nil {
+	var txResponse proxy.TxResponse
+	if err := client.executeRequest(ctx, &txResponse, http.MethodPost, fmt.Sprintf("%v0x%x", proxy.EthV0SendTxPrfx, b), nil); err != nil {
 		return nil, err
 	}
 	return &txResponse, nil
@@ -134,7 +134,7 @@ func (client *Client) sendHTTP(ctx context.Context, op *requestOp, result any) e
 		if status == http.StatusMethodNotAllowed {
 			return fmt.Errorf("method: '%v', path: '%v' %w", op.method, op.path, ErrMethodNotAllowed)
 		}
-		errMsg := service.JSONError{}
+		errMsg := proxy.JSONError{}
 		if err := json.NewDecoder(respBody).Decode(&errMsg); err != nil {
 			return err
 		}
@@ -184,7 +184,7 @@ func (client *Client) doRequest(ctx context.Context, method, path string, msg an
 
 type jsonResult struct {
 	result any
-	errMsg *service.JSONError
+	errMsg *proxy.JSONError
 }
 
 type requestOp struct {

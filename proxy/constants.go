@@ -1,4 +1,4 @@
-package service
+package proxy
 
 import (
 	"encoding/hex"

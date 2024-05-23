@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ATMackay/eth-proxy/service"
+	"github.com/ATMackay/eth-proxy/proxy"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +30,7 @@ var (
 
 type SvcStack struct {
 	Eth     *EthereumStack
-	Service *service.Service
+	Service *proxy.Service
 }
 
 type BlockchainBackend struct {

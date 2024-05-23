@@ -1,4 +1,4 @@
-package service
+package proxy
 
 const (
 	defaultPort      = 8080

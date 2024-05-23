@@ -1,4 +1,4 @@
-package service
+package proxy
 
 import (
 	"context"
@@ -14,17 +14,30 @@ import (
 )
 
 const (
-	StatusEndPnt = "/status" // status endpoint for LIVENESS probing
-	HeathEndPnt  = "/health" // health endpoint for READINESS probing
+	StatusEndPnt  = "/status"  // status endpoint for LIVENESS probing
+	HeathEndPnt   = "/health"  // health endpoint for READINESS probing
+	MetricsEndPnt = "/metrics" // Prometheus metrics endpoint
 
-	EthBalanceEndPnt = "/eth/balance/:address" // eth_getBalance proxy endpoint
-	EthTx            = "/eth/tx/hash/:id"      // eth_getTransaction proxy endpoint
-	EthTxReceipt     = "/eth/tx/receipt/:id"   // eth_getTransactionReceipt proxy endpoint
-	EthSendTx        = "/eth/tx/new/:txdata"   // eth_sendRawTransaction proxy endpoint
+	AddressKey = ":address"
+	IDKey      = ":id"
+	DataKey    = ":data"
 
-	metricsEndPnt = "/metrics" // Prometheus metrics endpoint
+	EthV0BalancePrfx   = "/eth/v0/balance/"    // eth_getBalance proxy endpoint
+	EthV0TxPrfx        = "/eth/v0/tx/hash/"    // eth_getTransaction proxy endpoint
+	EthV0TxReceiptPrfx = "/eth/v0/tx/receipt/" // eth_getTransactionReceipt proxy endpoint
+	EthV0SendTxPrfx    = "/eth/v0/tx/new/"     // eth_sendRawTransaction proxy endpoint
 
 	timeout = 5 * time.Second
+)
+
+var (
+	// httprouter endpoints
+
+	// V0
+	ethV0BalanceEndPnt   = EthV0BalancePrfx + AddressKey
+	ethV0TxEndPnt        = EthV0TxPrfx + IDKey
+	ethV0TxReceiptEndPnt = EthV0TxReceiptPrfx + IDKey
+	ethV0SendTxEndPnt    = EthV0SendTxPrfx + DataKey
 )
 
 // StatusResponse contains status response fields.
@@ -92,7 +105,7 @@ type BalanceResponse struct {
 func Balance(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
-		address := p.ByName("address")
+		address := p.ByName(AddressKey[1:])
 
 		if !common.IsHexAddress(address) {
 			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid address format"))
@@ -126,7 +139,7 @@ type TxResponse struct {
 func Tx(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
-		txid := p.ByName("id")
+		txid := p.ByName(IDKey[1:])
 
 		txHash := common.HexToHash(txid)
 
@@ -154,7 +167,7 @@ func Tx(ethClient SimpleEthClient) httprouter.Handle {
 func TxReceipt(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
-		txid := p.ByName("id")
+		txid := p.ByName(IDKey[1:])
 
 		txHash := common.HexToHash(txid)
 
@@ -187,7 +200,7 @@ func TxReceipt(ethClient SimpleEthClient) httprouter.Handle {
 func SendTx(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
-		txHex := p.ByName("txdata")
+		txHex := p.ByName(DataKey[1:])
 
 		txBytes, err := hexutil.Decode(txHex)
 		if err != nil {

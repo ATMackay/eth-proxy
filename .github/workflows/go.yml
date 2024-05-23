@@ -24,7 +24,7 @@ jobs:
       run: go build -v ./...
 
     - name: unit-test-server
-      run: go test -v -cover ./service
+      run: go test -v -cover ./proxy
 
     - name: unit-test-client
       run: go test -v -cover ./client

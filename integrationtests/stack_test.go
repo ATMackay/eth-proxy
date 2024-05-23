@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/ATMackay/eth-proxy/internal/stack"
-	"github.com/ATMackay/eth-proxy/service"
+	"github.com/ATMackay/eth-proxy/proxy"
 )
 
 // Test E2E flows against an in-memory Ethereum server.
@@ -29,31 +29,31 @@ func Test_E2EStackRead(t *testing.T) {
 	}{
 		{
 			"status",
-			func() string { return service.StatusEndPnt },
+			func() string { return proxy.StatusEndPnt },
 			http.MethodGet,
-			&service.StatusResponse{Message: "OK", Version: service.FullVersion, Service: service.ServiceName},
+			&proxy.StatusResponse{Message: "OK", Version: proxy.FullVersion, Service: proxy.ServiceName},
 			http.StatusOK,
 		},
 		{
 			"health",
-			func() string { return service.HeathEndPnt },
+			func() string { return proxy.HeathEndPnt },
 			http.MethodGet,
-			&service.HealthResponse{Version: service.FullVersion, Service: service.ServiceName, Failures: []string{}},
+			&proxy.HealthResponse{Version: proxy.FullVersion, Service: proxy.ServiceName, Failures: []string{}},
 			http.StatusOK,
 		},
 		{
 			"eth-balance",
 			func() string {
 				genesisAddr := s.Eth.Backend.BankAccount.From
-				return fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
+				return fmt.Sprintf("%v%v", proxy.EthV0BalancePrfx, genesisAddr.Hex())
 			},
 			http.MethodGet,
-			&service.BalanceResponse{Balance: stack.OneEther.String()},
+			&proxy.BalanceResponse{Balance: stack.OneEther.String()},
 			http.StatusOK,
 		},
 		{
 			"metrics",
-			func() string { return "/metrics" },
+			func() string { return proxy.MetricsEndPnt },
 			http.MethodGet,
 			nil,
 			http.StatusOK,
@@ -100,7 +100,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Check system health
-	response, err := executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), service.HeathEndPnt))
+	response, err := executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), proxy.HeathEndPnt))
 	if err != nil {
 		t.Fatalf("healthcheck err: %v", err)
 	}
@@ -127,7 +127,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 
 	// Send transaction via proxy
-	response, err = executeRequest(http.MethodPost, fmt.Sprintf("http://0.0.0.0%v/eth/tx/new/0x%x", s.Service.Server().Addr(), txBin))
+	response, err = executeRequest(http.MethodPost, fmt.Sprintf("http://0.0.0.0%v%v0x%x", s.Service.Server().Addr(), proxy.EthV0SendTxPrfx, txBin))
 	if err != nil {
 		t.Fatalf("tx send err: %v", err)
 	}
@@ -140,7 +140,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 	response.Body.Close()
 
-	txData := &service.TxResponse{}
+	txData := &proxy.TxResponse{}
 	if err := json.Unmarshal(b, txData); err != nil {
 		t.Fatalf("could not unmarshal response json: %v", err)
 	}
@@ -166,7 +166,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 
 	// query tx by transactionID
 
-	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v/eth/tx/hash/%v", s.Service.Server().Addr(), txHash.Hex()))
+	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v%v%v", s.Service.Server().Addr(), proxy.EthV0TxPrfx, txHash.Hex()))
 	if err != nil {
 		t.Fatalf("tx send err: %v", err)
 	}
@@ -179,7 +179,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 	response.Body.Close()
 
-	txData = &service.TxResponse{}
+	txData = &proxy.TxResponse{}
 	if err := json.Unmarshal(b, txData); err != nil {
 		t.Fatalf("could not unmarshal response json: %v", err)
 	}
@@ -196,7 +196,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	}
 
 	// query destination address balance
-	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v/eth/balance/%v", s.Service.Server().Addr(), toAddr.Hex()))
+	response, err = executeRequest(http.MethodGet, fmt.Sprintf("http://0.0.0.0%v%v%v", s.Service.Server().Addr(), proxy.EthV0BalancePrfx, toAddr.Hex()))
 	if err != nil {
 		t.Fatalf("tx send err: %v", err)
 	}
@@ -207,7 +207,7 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	balData := &service.BalanceResponse{}
+	balData := &proxy.BalanceResponse{}
 	if err := json.Unmarshal(b, balData); err != nil {
 		t.Fatalf("could not unmarshal response json: %v", err)
 	}
@@ -235,7 +235,7 @@ func Test_ConcurrentRequests(t *testing.T) {
 		{
 			"mock-stack-read-balance",
 			func() string {
-				return fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex()))
+				return fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), fmt.Sprintf("%v%v", proxy.EthV0BalancePrfx, genesisAddr.Hex()))
 			},
 			100,
 		},
@@ -243,7 +243,7 @@ func Test_ConcurrentRequests(t *testing.T) {
 			"mock-stack-read-txid",
 			func() string {
 				tx := s.Eth.Txs[1]
-				return fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), fmt.Sprintf("/eth/tx/hash/%v", tx.Hash().Hex()))
+				return fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), fmt.Sprintf("%v%v", proxy.EthV0TxPrfx, tx.Hash().Hex()))
 			},
 			100,
 		},

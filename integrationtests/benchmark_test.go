@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ATMackay/eth-proxy/internal/stack"
+	"github.com/ATMackay/eth-proxy/proxy"
 )
 
 func BenchmarkConcurrentRequests(b *testing.B) {
@@ -17,7 +18,7 @@ func BenchmarkConcurrentRequests(b *testing.B) {
 
 	genesisAddr := s.Eth.Backend.BankAccount.From
 
-	endpnt := fmt.Sprintf("/eth/balance/%v", genesisAddr.Hex())
+	endpnt := fmt.Sprintf("%v%v", proxy.EthV0BalancePrfx, genesisAddr.Hex())
 	time.Sleep(10 * time.Millisecond)
 	url := fmt.Sprintf("http://0.0.0.0%v%v", s.Service.Server().Addr(), endpnt)
 
