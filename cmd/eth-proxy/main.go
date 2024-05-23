@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 
-	"github.com/ATMackay/eth-proxy/service"
+	"github.com/ATMackay/eth-proxy/proxy"
 	"github.com/vrischmann/envconfig"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -59,7 +59,7 @@ func parseYAMLConfig(configFile string, receiver any, prefix string) error {
 
 func main() {
 
-	var cfg service.Config
+	var cfg proxy.Config
 
 	if err := parseYAMLConfig(configFilePath, &cfg, envPrefix); err != nil {
 		panic(fmt.Sprintf("error parsing config: %v", err))
@@ -67,17 +67,17 @@ func main() {
 
 	cfg.Sanitize()
 
-	l, err := service.NewLogger(cfg.LogLevel, cfg.LogFormat)
+	l, err := proxy.NewLogger(cfg.LogLevel, cfg.LogFormat)
 	if err != nil {
 		panic(err)
 	}
 
-	multiClient, err := service.NewMultiNodeClient(cfg.URLs, service.NewEthClient)
+	multiClient, err := proxy.NewMultiNodeClient(cfg.URLs, proxy.NewEthClient)
 	if err != nil {
 		panic(err)
 	}
 
-	srv := service.New(cfg.Port, l, multiClient)
+	srv := proxy.New(cfg.Port, l, multiClient)
 
 	srv.Start()
 	sigChan := make(chan os.Signal, 1)

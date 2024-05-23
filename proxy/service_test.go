@@ -1,4 +1,4 @@
-package service
+package proxy
 
 import (
 	"bytes"
@@ -355,7 +355,7 @@ func Test_API(t *testing.T) {
 			"eth-balance",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			func() string { return fmt.Sprintf("/eth/balance/%v", dummyAddr) },
+			func() string { return fmt.Sprintf("%v%v", EthV0BalancePrfx, dummyAddr) },
 			http.MethodGet,
 			&BalanceResponse{Balance: "0"},
 			http.StatusOK,
@@ -364,7 +364,7 @@ func Test_API(t *testing.T) {
 			"eth-tx",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			func() string { return fmt.Sprintf("/eth/tx/hash/%v", dummyTxid) },
+			func() string { return fmt.Sprintf("%v%v", EthV0TxPrfx, dummyTxid) },
 			http.MethodGet,
 			&TxResponse{Tx: dummyTx, Txid: dummyTxid, IsPending: false},
 			http.StatusOK,
@@ -373,7 +373,7 @@ func Test_API(t *testing.T) {
 			"eth-tx-receipt",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			func() string { return fmt.Sprintf("/eth/tx/receipt/%v", dummyTxid) },
+			func() string { return fmt.Sprintf("%v%v", EthV0TxReceiptPrfx, dummyTxid) },
 			http.MethodGet,
 			&types.Receipt{},
 			http.StatusOK,
@@ -384,7 +384,7 @@ func Test_API(t *testing.T) {
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
 			func() string {
 				b, _ := dummyTx.MarshalBinary()
-				return fmt.Sprintf("/eth/tx/new/0x%x", b)
+				return fmt.Sprintf("%v0x%x", EthV0SendTxPrfx, b)
 			},
 			http.MethodPost,
 			&TxResponse{Txid: dummyTx.Hash().Hex()},
@@ -397,7 +397,7 @@ func Test_API(t *testing.T) {
 			"eth-balance-malformed",
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
-			func() string { return fmt.Sprintf("/eth/balance/%v", "0xnotanaddress") },
+			func() string { return fmt.Sprintf("%v0xnotanaddress", EthV0BalancePrfx) },
 			http.MethodGet,
 			map[string]string{"error": "invalid address format"},
 			http.StatusBadRequest,
@@ -407,7 +407,7 @@ func Test_API(t *testing.T) {
 			"-",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
 			func() string {
-				return "/eth/tx/new/0xnotATx"
+				return EthV0SendTxPrfx + "0xnotATx"
 			},
 			http.MethodPost,
 			map[string]string{"error": "invalid tx data: invalid hex string"},
@@ -429,7 +429,7 @@ func Test_API(t *testing.T) {
 			"eth-balance-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			func() string { return fmt.Sprintf("/eth/balance/%v", dummyAddr) },
+			func() string { return fmt.Sprintf("%v%v", EthV0BalancePrfx, dummyAddr) },
 			http.MethodGet,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
@@ -438,7 +438,7 @@ func Test_API(t *testing.T) {
 			"eth-tx-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			func() string { return fmt.Sprintf("/eth/tx/hash/%v", dummyTxid) },
+			func() string { return fmt.Sprintf("%v%v", EthV0TxPrfx, dummyTxid) },
 			http.MethodGet,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
@@ -447,7 +447,7 @@ func Test_API(t *testing.T) {
 			"eth-receipt-err",
 			"testErr",
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
-			func() string { return fmt.Sprintf("/eth/tx/receipt/%v", dummyTxid) },
+			func() string { return fmt.Sprintf("%v%v", EthV0TxReceiptPrfx, dummyTxid) },
 			http.MethodGet,
 			map[string]string{"error": "eth client error: testErr"},
 			http.StatusInternalServerError,
@@ -458,7 +458,7 @@ func Test_API(t *testing.T) {
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
 			func() string {
 				b, _ := dummyTx.MarshalBinary()
-				return fmt.Sprintf("/eth/tx/new/0x%x", b)
+				return fmt.Sprintf("%v0x%x", EthV0SendTxPrfx, b)
 			},
 			http.MethodPost,
 			map[string]string{"error": "eth client error: testErr"},

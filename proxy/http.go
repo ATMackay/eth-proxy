@@ -1,4 +1,4 @@
-package service
+package proxy
 
 import (
 	"context"
@@ -45,22 +45,22 @@ func makeProxyAPIs(ethCli SimpleEthClient) *api {
 			methodType: http.MethodGet,
 		},
 		{
-			path:       EthBalanceEndPnt,
+			path:       ethV0BalanceEndPnt,
 			handler:    Balance(ethCli),
 			methodType: http.MethodGet,
 		},
 		{
-			path:       EthTx,
+			path:       ethV0TxEndPnt,
 			handler:    Tx(ethCli),
 			methodType: http.MethodGet,
 		},
 		{
-			path:       EthTxReceipt,
+			path:       ethV0TxReceiptEndPnt,
 			handler:    TxReceipt(ethCli),
 			methodType: http.MethodGet,
 		},
 		{
-			path:       EthSendTx,
+			path:       ethV0SendTxEndPnt,
 			handler:    SendTx(ethCli),
 			methodType: http.MethodPost,
 		},
@@ -83,7 +83,7 @@ func (a *api) routes(l *logrus.Entry) *httprouter.Router {
 	}
 
 	// Add metrics server - do not use logging middleware
-	router.Handler(http.MethodGet, metricsEndPnt, promhttp.Handler())
+	router.Handler(http.MethodGet, MetricsEndPnt, promhttp.Handler())
 
 	return router
 }

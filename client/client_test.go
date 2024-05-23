@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ATMackay/eth-proxy/internal/stack"
-	"github.com/ATMackay/eth-proxy/service"
+	"github.com/ATMackay/eth-proxy/proxy"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -135,9 +135,9 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("method-not-allowed", func(t *testing.T) {
-		var txResponse service.TxResponse
+		var txResponse proxy.TxResponse
 		// incorrect verb
-		if err := cl.executeRequest(ctx, &txResponse, http.MethodPut, fmt.Sprintf("/eth/tx/new/0x%x", b), tx); !errors.Is(err, ErrMethodNotAllowed) {
+		if err := cl.executeRequest(ctx, &txResponse, http.MethodPut, fmt.Sprintf("%v0x%x", proxy.EthV0SendTxPrfx, b), tx); !errors.Is(err, ErrMethodNotAllowed) {
 			t.Fatalf("expected error got %v", err)
 		}
 	})
