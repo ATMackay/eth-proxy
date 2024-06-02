@@ -7,14 +7,16 @@ RUN apk add make cmake git alpine-sdk
 
 # Read arguments
 ARG SERVICE
-ARG GIT_SHA
-ARG GIT_TIMESTAMP
+ARG VERSION_TAG
+ARG GIT_COMMIT
+ARG COMMIT_DATE
 
 # Set env variables
-ENV commit_date=$GIT_TIMESTAMP
-ENV service_name=$SERVICE
-ENV commit_hash=$GIT_SHA
-RUN echo "building service: ${service_name}, git commit: ${commit_hash}, commit date: ${commit_date}"
+ENV COMMIT_DATE=$COMMIT_DATE
+ENV SERVICE=$SERVICE
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV VERSION_TAG=$VERSION_TAG
+RUN echo "building service: ${SERVICE}, version: ${VERSION_TAG}, git commit: ${GIT_COMMIT}, commit date: ${COMMIT_DATE}"
 
 # Set the working directory
 WORKDIR /
@@ -24,23 +26,23 @@ COPY . .
 RUN go mod download
 
 
-RUN GO111MODULES=on \
-    go build \
-    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=${commit_date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
-    -o /out/eth-proxy ./cmd/eth-proxy/
-
+#RUN GO111MODULES=on \
+#    go build \
+#    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=${commit_date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
+#    -o /build/eth-proxy ./cmd/eth-proxy/
+RUN make build
 # Create linux svcuser
-RUN mkdir /out/etc && \
-    echo "svcuser:x:1010:1010::/sbin/nologin:/bin/false" > /out/etc/passwd && \
-    echo "macuser:x:501:20::/sbin/nologin:/bin/false" >> /out/etc/passwd && \
-    echo "linuxuser:x:1000:1000::/sbin/nologin:/bin/false" >> /out/etc/passwd && \
-    echo "root:x:0:0:root:/sbin/nologin:/bin/false" >> /out/etc/passwd && \
-    echo "svcgroup:x:1010:svcuser" > /out/etc/group && \
-    echo "macgroup:x:20:macuser" >> /out/etc/group && \
-    echo "linuxgroup:x:1000:linuxuser" >> /out/etc/group && \
-    echo "root:x:0:root" >> /out/etc/group && \
-    mkdir /out/config && \
-    chown -R 1010:1010 /out/config
+RUN mkdir /build/etc && \
+    echo "svcuser:x:1010:1010::/sbin/nologin:/bin/false" > /build/etc/passwd && \
+    echo "macuser:x:501:20::/sbin/nologin:/bin/false" >> /build/etc/passwd && \
+    echo "linuxuser:x:1000:1000::/sbin/nologin:/bin/false" >> /build/etc/passwd && \
+    echo "root:x:0:0:root:/sbin/nologin:/bin/false" >> /build/etc/passwd && \
+    echo "svcgroup:x:1010:svcuser" > /build/etc/group && \
+    echo "macgroup:x:20:macuser" >> /build/etc/group && \
+    echo "linuxgroup:x:1000:linuxuser" >> /build/etc/group && \
+    echo "root:x:0:root" >> /build/etc/group && \
+    mkdir /build/config && \
+    chown -R 1010:1010 /build/config
 
 
 ############################################################################################################
@@ -54,7 +56,7 @@ RUN apk add --no-cache ca-certificates
 
 # Copy binary to a scratch container. Let's keep our images nice and small!
 FROM scratch
-COPY --from=go_builder /out .
+COPY --from=go_builder /build .
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Set User
 USER svcuser

@@ -546,10 +546,6 @@ func Test_HealthCheckErr(t *testing.T) {
 	}
 }
 
-func Test_Embedded(t *testing.T) {
-	_ = makeVCS()
-}
-
 func executeRequest(methodType, url string) (respBytes []byte, code int, err error) {
 	req, err := http.NewRequestWithContext(context.Background(), methodType, url, nil)
 	if err != nil {
