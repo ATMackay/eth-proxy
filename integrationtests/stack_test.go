@@ -31,14 +31,14 @@ func Test_E2EStackRead(t *testing.T) {
 			"status",
 			func() string { return proxy.StatusEndPnt },
 			http.MethodGet,
-			&proxy.StatusResponse{Message: "OK", Version: proxy.FullVersion, Service: proxy.ServiceName},
+			&proxy.StatusResponse{Message: "OK", Version: proxy.Version, Service: proxy.ServiceName},
 			http.StatusOK,
 		},
 		{
 			"health",
 			func() string { return proxy.HeathEndPnt },
 			http.MethodGet,
-			&proxy.HealthResponse{Version: proxy.FullVersion, Service: proxy.ServiceName, Failures: []string{}},
+			&proxy.HealthResponse{Version: proxy.Version, Service: proxy.ServiceName, Failures: []string{}},
 			http.StatusOK,
 		},
 		{

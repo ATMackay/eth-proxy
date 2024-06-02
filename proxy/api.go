@@ -50,7 +50,7 @@ type StatusResponse struct {
 // Status implements the status request endpoint. Always returns OK.
 func Status() httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		if err := respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName}); err != nil {
+		if err := respondWithJSON(w, http.StatusOK, &StatusResponse{Message: "OK", Version: Version, Service: ServiceName}); err != nil {
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("respond error: %v", err))
 		}
 	})
@@ -70,7 +70,7 @@ func Health(ethClient SimpleEthClient) httprouter.Handle {
 	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		health := &HealthResponse{
 			Service: ServiceName,
-			Version: FullVersion,
+			Version: Version,
 		}
 		var failures = []string{}
 		var httpCode = http.StatusOK

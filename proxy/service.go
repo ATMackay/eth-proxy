@@ -26,10 +26,15 @@ func New(port int, l *logrus.Entry, client SimpleEthClient) *Service {
 
 // Start creates the HTTP server.
 func (s *Service) Start() {
+	s.logger.Info("starting service")
 	s.logger.WithFields(logrus.Fields{
-		"compilationDate": date,
-		"gitCommit":       gitCommitHash,
-	}).Infof("starting %v service", ServiceName)
+		"commit":  GitCommit,
+		"version": Version,
+	}).Info("version")
+	s.logger.WithFields(logrus.Fields{
+		"buildDate":       BuildDate,
+		"commitTimestamp": CommitDate,
+	}).Info("build date")
 	s.server.Start()
 
 	s.logger.Infof("listening on port %v", s.server.Addr())
