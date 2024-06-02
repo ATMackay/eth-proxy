@@ -25,12 +25,11 @@ COPY . .
 # Download dependencies
 RUN go mod download
 
+RUN GO111MODULES=on \
+    go build \
+    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/proxy.Version=${VERSION_TAG}' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=${COMMIT_DATE}' -X 'github.com/ATMackay/eth-proxy/service.GitCommit=${GIT_COMMIT}'"  \
+    -o /build/eth-proxy ./cmd/eth-proxy/
 
-#RUN GO111MODULES=on \
-#    go build \
-#    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=${commit_date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
-#    -o /build/eth-proxy ./cmd/eth-proxy/
-RUN make build
 # Create linux svcuser
 RUN mkdir /build/etc && \
     echo "svcuser:x:1010:1010::/sbin/nologin:/bin/false" > /build/etc/passwd && \

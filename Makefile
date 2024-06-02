@@ -11,7 +11,7 @@ COMMIT_DATE ?= $(shell git show -s --format="%ci" $(shell git rev-parse HEAD))
 
 build:
 	GO111MODULE=on go build -o $(BUILD_FOLDER)/eth-proxy -v \
-	-ldflags=" -X 'github.com/ATMackay/eth-proxy/proxy.versionTag=$(VERSION_TAG)' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=$(COMMIT_DATE)' -X 'github.com/ATMackay/eth-proxy/proxy.gitCommit=$(GIT_COMMIT)'" \
+	-ldflags=" -X 'github.com/ATMackay/eth-proxy/proxy.Version=$(VERSION_TAG)' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=$(COMMIT_DATE)' -X 'github.com/ATMackay/eth-proxy/proxy.GitCommit=$(GIT_COMMIT)'" \
 	./cmd/eth-proxy
 	@echo  "To run the application execute ./build/eth-proxy --config config.yml"
 

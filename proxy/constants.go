@@ -9,10 +9,8 @@ const (
 )
 
 var (
-	versionTag = "0.1.0" // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.versionTag=$version_tag'"
-	gitCommit  = ""      // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.gitCommit=$commit_hash'"
-
-	Version = versionTag
+	Version   = "0.1.0" // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.Version=$version_tag'"
+	GitCommit = ""      // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.GitCommit=$commit_hash'"
 
 	CommitDate = "" // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=$build_date'"
 	BuildDate  = time.Now().Format(time.DateTime)
