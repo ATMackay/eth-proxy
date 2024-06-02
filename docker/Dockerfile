@@ -6,15 +6,15 @@ RUN apk add make cmake git alpine-sdk
 # Setup
 
 # Read arguments
-ARG DATE
 ARG SERVICE
 ARG GIT_SHA
+ARG GIT_TIMESTAMP
 
 # Set env variables
-ENV date=$DATE
+ENV commit_date=$GIT_TIMESTAMP
 ENV service_name=$SERVICE
 ENV commit_hash=$GIT_SHA
-RUN echo "building service: ${service_name}, git commit: ${commit_hash}, commit date: ${date}"
+RUN echo "building service: ${service_name}, git commit: ${commit_hash}, commit date: ${commit_date}"
 
 # Set the working directory
 WORKDIR /
@@ -26,7 +26,7 @@ RUN go mod download
 
 RUN GO111MODULES=on \
     go build \
-    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/service.buildDate=${date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
+    -ldflags "-w -linkmode external -extldflags '-static' -X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=${commit_date}' -X 'github.com/ATMackay/eth-proxy/service.gitCommit=${commit_hash}'"  \
     -o /out/eth-proxy ./cmd/eth-proxy/
 
 # Create linux svcuser
