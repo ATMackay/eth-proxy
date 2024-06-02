@@ -36,7 +36,7 @@ func NewLogger(logLevel, logFormat string) (*logrus.Entry, error) {
 	logger.Level = l.Level
 	logger = logger.WithFields(logrus.Fields{
 		"serviceName": ServiceName,
-		"version":     FullVersion,
+		"version":     Version,
 	})
 	return logger, nil
 }

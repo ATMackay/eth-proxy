@@ -27,8 +27,8 @@ func New(port int, l *logrus.Entry, client SimpleEthClient) *Service {
 // Start creates the HTTP server.
 func (s *Service) Start() {
 	s.logger.WithFields(logrus.Fields{
-		"compilationDate": date,
-		"gitCommit":       gitCommitHash,
+		"compilationTimeStamp": BuildDate,
+		"versionTimeStamp":     CommitDate,
 	}).Infof("starting %v service", ServiceName)
 	s.server.Start()
 

@@ -339,7 +339,7 @@ func Test_API(t *testing.T) {
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
 			func() string { return StatusEndPnt },
 			http.MethodGet,
-			&StatusResponse{Message: "OK", Version: FullVersion, Service: ServiceName},
+			&StatusResponse{Message: "OK", Version: Version, Service: ServiceName},
 			http.StatusOK,
 		},
 		{
@@ -348,7 +348,7 @@ func Test_API(t *testing.T) {
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClient) },
 			func() string { return HeathEndPnt },
 			http.MethodGet,
-			&HealthResponse{Version: FullVersion, Service: ServiceName, Failures: []string{}},
+			&HealthResponse{Version: Version, Service: ServiceName, Failures: []string{}},
 			http.StatusOK,
 		},
 		{
@@ -422,7 +422,7 @@ func Test_API(t *testing.T) {
 			func(urls string) *Service { return makeTestService(t, urls, newFakeEthClientWithErr) },
 			func() string { return HeathEndPnt },
 			http.MethodGet,
-			&HealthResponse{Version: FullVersion, Service: ServiceName, Failures: []string{"node 0 err: testErr"}},
+			&HealthResponse{Version: Version, Service: ServiceName, Failures: []string{"node 0 err: testErr"}},
 			http.StatusServiceUnavailable,
 		},
 		{
@@ -548,7 +548,6 @@ func Test_HealthCheckErr(t *testing.T) {
 
 func Test_Embedded(t *testing.T) {
 	_ = makeVCS()
-	_ = makeDate()
 }
 
 func executeRequest(methodType, url string) (respBytes []byte, code int, err error) {

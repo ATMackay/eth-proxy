@@ -8,18 +8,17 @@ import (
 )
 
 const (
-	Version     = "0.1.0"
 	ServiceName = "eth-proxy"
 )
 
 var (
-	FullVersion = fmt.Sprintf("%s-%v", Version, gitCommitHash[0:8]) // FullVersion prints semantic version followed by commit hash
+	versionTag = "0.1.0" // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.versionTag=$version_tag'"
+	gitCommit  = ""      // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.gitCommit=$commit_hash'"
 
-	//
-	// https://icinga.com/blog/2022/05/25/embedding-git-commit-information-in-go-binaries/
-	//
-	gitCommit string // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/service.gitCommit=$commit_hash'"
-	buildDate string // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/service.buildDate=$build_date'"
+	Version = fmt.Sprintf("%v-%v", versionTag, gitCommitHash[0:8])
+
+	CommitDate = "" // overwritten by -ldflag "-X 'github.com/ATMackay/eth-proxy/proxy.CommitDate=$build_date'"
+	BuildDate  = time.Now().Format(time.DateTime)
 )
 
 // gitCommitHash returns a string builder that reads information embedded
@@ -46,17 +45,6 @@ func makeVCS() string {
 	mustDecodeHex(commit)
 	return commit
 }
-
-// date returns a formatted time.Time to string generator
-var date = func() string { return makeDate() }()
-
-func makeDate() string {
-	if buildDate != "" {
-		return buildDate
-	}
-	return time.Now().Format(time.RFC3339)
-}
-
 func mustDecodeHex(input string) {
 	_, err := hex.DecodeString(input)
 	if err != nil {
