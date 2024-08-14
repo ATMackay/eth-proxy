@@ -3,6 +3,10 @@
 # Build folder
 BUILD_FOLDER = build
 
+# Test coverage variables
+COVERAGE_BUILD_FOLDER = $(BUILD_FOLDER)/coverage
+UNIT_COVERAGE_OUT  = $(COVERAGE_BUILD_FOLDER)/ut_cov.out
+
 # Git based version
 VERSION_TAG ?= $(shell git describe --tags)
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
@@ -18,8 +22,15 @@ build:
 run: build
 	cd build && $(BUILD_FOLDER)/eth-proxy --config ../config.yml
 
-test: 
-	go test -v -cover ./proxy ./client
+build/coverage:
+	mkdir -p $(COVERAGE_BUILD_FOLDER)
+
+test: build/coverage
+	go test -cover -coverprofile $(UNIT_COVERAGE_OUT) -v ./proxy ./client
+
+test-coverage: test
+	go tool cover -html=$(UNIT_COVERAGE_OUT)
+
 
 test-integration:
 	go test -v -cover ./integrationtests
