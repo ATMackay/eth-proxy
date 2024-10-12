@@ -15,3 +15,6 @@ docker build \
        -t eth-proxy:latest  \
        -t eth-proxy:"$commit_hash_short"  \
        -f Dockerfile ..
+       
+# Remove intermediate Docker layers
+docker image prune -f

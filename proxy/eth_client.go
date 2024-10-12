@@ -47,14 +47,14 @@ type item struct {
 func NewMultiNodeClient(possibleUrls string, constructor func(url string) (SimpleEthClient, error)) (*multiNodeClient, error) {
 	urls := strings.Split(possibleUrls, ",")
 	var nodes []*item
-	errors := make(map[string]error)
+	errs := make(map[string]error)
 	for i := 0; i < len(urls); i++ {
 		url := urls[i]
 		var node SimpleEthClient
 		n, err := constructor(url)
 		node = n
 		if err != nil {
-			errors[url] = err
+			errs[url] = err
 			continue
 		}
 		nodes = append(nodes, &item{
@@ -64,10 +64,10 @@ func NewMultiNodeClient(possibleUrls string, constructor func(url string) (Simpl
 	}
 	if len(nodes) == 0 {
 		message := "cannot connect to any nodes"
-		for url, err := range errors {
+		for url, err := range errs {
 			message = fmt.Sprintf("%s url='%s' err='%s'", message, url, err.Error())
 		}
-		return nil, fmt.Errorf(message)
+		return nil, errors.New(message)
 	}
 	return &multiNodeClient{
 		nodes: nodes,
