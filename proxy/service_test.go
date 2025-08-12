@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"math/rand"
 	"net/http"
@@ -557,8 +558,11 @@ func executeRequest(methodType, url string) (respBytes []byte, code int, err err
 	if err != nil {
 		return nil, 0, err
 	}
-	defer response.Body.Close()
-
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 	// Read the response body
 	b, err := io.ReadAll(response.Body)
 	if err != nil {

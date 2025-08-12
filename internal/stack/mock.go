@@ -15,7 +15,11 @@ func MockEthProxyService(t testing.TB, logLevel string) *SvcStack {
 		t.Fatal(err)
 	}
 
-	t.Cleanup(func() { bk.Close() })
+	t.Cleanup(func() {
+		if err := bk.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	// create proxy service
 	cfg := &proxy.Config{

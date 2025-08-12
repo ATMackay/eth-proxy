@@ -3,6 +3,7 @@ package keys
 import (
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,24 +60,16 @@ func Test_Deterministic_Signatures(t *testing.T) {
 
 }
 
-func writeJSON(path string, data any) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	enc := json.NewEncoder(f)
-	enc.SetIndent("", "  ")
-	return enc.Encode(data)
-}
-
 func readJSON(path string, v any) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Printf("failed to close file: %v", err)
+		}
+	}()
 
 	if err := json.NewDecoder(f).Decode(&v); err != nil {
 		return err

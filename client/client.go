@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 
@@ -122,7 +123,11 @@ func (client *Client) sendHTTP(ctx context.Context, op *requestOp, result any) e
 		return err
 	}
 
-	defer respBody.Close()
+	defer func() {
+		if err := respBody.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	// await response
 	var res = &jsonResult{
