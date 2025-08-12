@@ -3,31 +3,22 @@ package keys
 import (
 	"encoding/hex"
 	"encoding/json"
-	"log"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/ATMackay/eth-proxy/keys/data"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const fixedMessage = "this is my fixed message to sign"
 
 func Test_Deterministic_Signatures(t *testing.T) {
-
-	// 2) Save to a .json file (under test temp dir)
-	keysJsonPath := filepath.Join("data/eth_keys.json")
-
-	// 3) Reload and test signature generation for a fixed message
 	var keys []keyRecord
-	if err := readJSON(keysJsonPath, &keys); err != nil {
+	if err := readJSON(data.ETHTestKeys, &keys); err != nil {
 		t.Fatalf("read json: %v", err)
 	}
 
-	sigsJsonPath := filepath.Join("data/eth_sigs.json")
-
 	var sigs []signatureRecord
-	if err := readJSON(sigsJsonPath, &sigs); err != nil {
+	if err := readJSON(data.ETHTestSigs, &sigs); err != nil {
 		t.Fatalf("read json: %v", err)
 	}
 
@@ -60,19 +51,6 @@ func Test_Deterministic_Signatures(t *testing.T) {
 
 }
 
-func readJSON(path string, v any) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Printf("failed to close file: %v", err)
-		}
-	}()
-
-	if err := json.NewDecoder(f).Decode(&v); err != nil {
-		return err
-	}
-	return nil
+func readJSON(jSonStr string, v any) error {
+	return json.Unmarshal([]byte(jSonStr), v)
 }

@@ -1,4 +1,6 @@
-[
+package data
+
+const ETHTestSigs = `[
   {
     "address": "0x3810E766FA0BA23Dd8Dc0c0AE3189a5d643Bf398",
     "signature": "87e8ee50cd3f912c7989ed38ef23586cc4fd724e0fb8058320861321e4979afb7b6bcf798281d37be60e345eb4cec73780fb55abacb3f0a9e0152a36ef5db8f101"
@@ -3999,4 +4001,4 @@
     "address": "0xb7EcA36C7da9F9A338092CA4e57B4cc10509488F",
     "signature": "9e90bec754dc1e2ebaec6022565a4de0ba94e606f971040c950781730ed00182598e7727424ea70702d087e6cd698db9b1a1be80d406a8c0b615feac2a9d31d100"
   }
-]
+]`

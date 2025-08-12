@@ -1,4 +1,6 @@
-[
+package data
+
+const ETHTestKeys = `[
   {
     "private_key": "cea5a5eef22ee676d232be30e6c096246e28d2d6f255f19029dd9c1ef58d86e2",
     "address": "0x3810E766FA0BA23Dd8Dc0c0AE3189a5d643Bf398"
@@ -3999,4 +4001,4 @@
     "private_key": "9e1737cc767edf1c254e579f69abddf2e7233a3448cb7d128cffa2d0e671371c",
     "address": "0xb7EcA36C7da9F9A338092CA4e57B4cc10509488F"
   }
-]
+]`
