@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 	"testing"
@@ -67,7 +68,11 @@ func Test_E2EStackRead(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%v: %v", tt.name, err)
 			}
-			defer response.Body.Close()
+			defer func() {
+				if err := response.Body.Close(); err != nil {
+					log.Printf("failed to close response body: %v", err)
+				}
+			}()
 
 			// Read the response body
 			b, err := io.ReadAll(response.Body)
@@ -108,7 +113,11 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	if g, w := response.StatusCode, http.StatusOK; g != w {
 		t.Fatalf("unexpected response code, want %v got %v", w, g)
 	}
-	response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	// create transaction using backend client
 
@@ -138,7 +147,11 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	if g, w := response.StatusCode, http.StatusOK; g != w {
 		t.Fatalf("unexpected response code, want %v got %v (body=%s)", w, g, b)
 	}
-	response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	txData := &proxy.TxResponse{}
 	if err := json.Unmarshal(b, txData); err != nil {
@@ -177,7 +190,11 @@ func Test_E2EStackTxWrite(t *testing.T) {
 	if g, w := response.StatusCode, http.StatusOK; g != w {
 		t.Fatalf("unexpected response code, want %v got %v (body=%s)", w, g, b)
 	}
-	response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	txData = &proxy.TxResponse{}
 	if err := json.Unmarshal(b, txData); err != nil {

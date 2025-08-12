@@ -26,7 +26,7 @@ build/coverage:
 	mkdir -p $(COVERAGE_BUILD_FOLDER)
 
 test: build/coverage
-	go test -cover -coverprofile $(UNIT_COVERAGE_OUT) -v ./proxy ./client
+	go test -cover -coverprofile $(UNIT_COVERAGE_OUT) -v ./proxy ./client ./keys
 
 test-coverage: test
 	go tool cover -html=$(UNIT_COVERAGE_OUT)
